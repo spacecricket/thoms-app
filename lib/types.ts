@@ -1,0 +1,55 @@
+export interface ScrapedEvent {
+  id: string;
+  name: string;
+  date: string; // ISO YYYY-MM-DD
+  ratingBefore: number | null;
+  ratingAfter: number;
+  won: number;
+  lost: number;
+  played: number;
+  alreadyImported: boolean;
+  importedAt: string | null;
+}
+
+export interface ScrapedMatch {
+  opponentName: string;
+  score: string;
+  thomWon: boolean;
+}
+
+export interface ScrapedEventDetail extends ScrapedEvent {
+  matches: ScrapedMatch[];
+}
+
+export interface H2HRow {
+  opponentName: string;
+  won: number;
+  lost: number;
+  total: number;
+  winPct: number;
+  scores: string[];
+}
+
+export interface AnalysisData {
+  player: {
+    name: string;
+    usattId: string;
+    currentRating: number;
+    totalEvents: number;
+    totalMatches: number;
+    totalWon: number;
+    totalLost: number;
+    winPct: number;
+    ratingGain: number;
+  };
+  ratingTimeline: {
+    id: string;
+    date: string;
+    name: string;
+    ratingBefore: number | null;
+    ratingAfter: number;
+    won: number;
+    lost: number;
+  }[];
+  headToHead: H2HRow[];
+}
