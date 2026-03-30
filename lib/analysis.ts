@@ -10,26 +10,38 @@ export async function getAnalysis(): Promise<AnalysisData> {
     orderBy: { id: "asc" },
   });
 
+  // Build event lookup for match details
+  const eventMap = new Map(events.map((e) => [e.id, e]));
+
   // Build head-to-head from matches
   const h2hMap = new Map<
     string,
-    { won: number; lost: number; scores: string[] }
+    { won: number; lost: number; scores: string[]; matchDetails: { date: string; eventName: string; score: string; thomWon: boolean }[] }
   >();
   for (const m of matches) {
     const existing = h2hMap.get(m.opponentName) ?? {
       won: 0,
       lost: 0,
       scores: [],
+      matchDetails: [],
     };
     if (m.thomWon) existing.won++;
     else existing.lost++;
     existing.scores.push(`${m.thomWon ? "W" : "L"} ${m.score}`);
+    const evt = eventMap.get(m.eventId);
+    existing.matchDetails.push({
+      date: evt?.eventDate.toISOString().split("T")[0] ?? "",
+      eventName: evt?.name ?? "",
+      score: m.score,
+      thomWon: m.thomWon,
+    });
     h2hMap.set(m.opponentName, existing);
   }
 
   const headToHead: H2HRow[] = [...h2hMap.entries()]
-    .map(([opponentName, { won, lost, scores }]) => {
+    .map(([opponentName, { won, lost, scores, matchDetails }]) => {
       const total = won + lost;
+      matchDetails.sort((a, b) => a.date.localeCompare(b.date));
       return {
         opponentName,
         won,
@@ -37,6 +49,7 @@ export async function getAnalysis(): Promise<AnalysisData> {
         total,
         winPct: total > 0 ? Math.round((100 * won) / total) : 0,
         scores,
+        matchDetails,
       };
     })
     .sort((a, b) => b.total - a.total || a.opponentName.localeCompare(b.opponentName));

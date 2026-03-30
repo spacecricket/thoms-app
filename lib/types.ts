@@ -21,6 +21,13 @@ export interface ScrapedEventDetail extends ScrapedEvent {
   matches: ScrapedMatch[];
 }
 
+export interface H2HMatchDetail {
+  date: string;
+  eventName: string;
+  score: string;
+  thomWon: boolean;
+}
+
 export interface H2HRow {
   opponentName: string;
   won: number;
@@ -28,6 +35,7 @@ export interface H2HRow {
   total: number;
   winPct: number;
   scores: string[];
+  matchDetails: H2HMatchDetail[];
 }
 
 export interface MatchRecord {

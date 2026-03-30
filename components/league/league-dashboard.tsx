@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { RatingChart } from "./rating-chart";
 import { HeadToHeadTable } from "./head-to-head-table";
 import { StatsRow } from "./stats-row";
-import type { AnalysisData, H2HRow } from "@/lib/types";
+import type { AnalysisData, H2HRow, H2HMatchDetail } from "@/lib/types";
 
 interface Props {
   data: AnalysisData;
@@ -31,11 +31,20 @@ export function LeagueDashboard({ data }: Props) {
     [filteredTimeline],
   );
 
+  // Build a lookup from eventId → { date, name }
+  const eventLookup = useMemo(() => {
+    const map = new Map<string, { date: string; name: string }>();
+    for (const e of ratingTimeline) {
+      map.set(e.id, { date: e.date, name: e.name });
+    }
+    return map;
+  }, [ratingTimeline]);
+
   // Recompute H2H from raw matches filtered by active events
   const filteredH2H: H2HRow[] = useMemo(() => {
     const h2hMap = new Map<
       string,
-      { won: number; lost: number; scores: string[] }
+      { won: number; lost: number; scores: string[]; matchDetails: H2HMatchDetail[] }
     >();
     for (const m of matches) {
       if (!activeEventIds.has(m.eventId)) continue;
@@ -43,15 +52,25 @@ export function LeagueDashboard({ data }: Props) {
         won: 0,
         lost: 0,
         scores: [],
+        matchDetails: [],
       };
       if (m.thomWon) existing.won++;
       else existing.lost++;
       existing.scores.push(`${m.thomWon ? "W" : "L"} ${m.score}`);
+      const evt = eventLookup.get(m.eventId);
+      existing.matchDetails.push({
+        date: evt?.date ?? "",
+        eventName: evt?.name ?? "",
+        score: m.score,
+        thomWon: m.thomWon,
+      });
       h2hMap.set(m.opponentName, existing);
     }
     return [...h2hMap.entries()]
-      .map(([opponentName, { won, lost, scores }]) => {
+      .map(([opponentName, { won, lost, scores, matchDetails }]) => {
         const total = won + lost;
+        // Sort match details by date ascending
+        matchDetails.sort((a, b) => a.date.localeCompare(b.date));
         return {
           opponentName,
           won,
@@ -59,13 +78,14 @@ export function LeagueDashboard({ data }: Props) {
           total,
           winPct: total > 0 ? Math.round((100 * won) / total) : 0,
           scores,
+          matchDetails,
         };
       })
       .sort(
         (a, b) =>
           b.total - a.total || a.opponentName.localeCompare(b.opponentName),
       );
-  }, [matches, activeEventIds]);
+  }, [matches, activeEventIds, eventLookup]);
 
   // Compute filtered stats
   const filteredStats = useMemo(() => {
