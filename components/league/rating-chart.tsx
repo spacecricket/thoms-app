@@ -52,11 +52,24 @@ export function RatingChart({ timeline }: Props) {
             scale="time"
             domain={["dataMin", "dataMax"]}
             allowDuplicatedCategory={false}
+            ticks={(() => {
+              if (data.length === 0) return [];
+              const min = new Date(data[0].ts);
+              const max = new Date(data[data.length - 1].ts);
+              const ticks: number[] = [];
+              const d = new Date(min.getFullYear(), min.getMonth(), 1);
+              // Start from the next 1st if min isn't already the 1st
+              if (d.getTime() < min.getTime()) d.setMonth(d.getMonth() + 1);
+              while (d.getTime() <= max.getTime()) {
+                ticks.push(d.getTime());
+                d.setMonth(d.getMonth() + 1);
+              }
+              return ticks;
+            })()}
             tick={{ fill: "#94a3b8", fontSize: 11 }}
             tickFormatter={(v: number) =>
               new Date(v).toLocaleDateString("en-US", {
                 month: "short",
-                day: "numeric",
                 year: "2-digit",
               })
             }
