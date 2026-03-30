@@ -30,6 +30,13 @@ export interface H2HRow {
   scores: string[];
 }
 
+export interface MatchRecord {
+  opponentName: string;
+  score: string;
+  thomWon: boolean;
+  eventId: string;
+}
+
 export interface AnalysisData {
   player: {
     name: string;
@@ -52,4 +59,5 @@ export interface AnalysisData {
     lost: number;
   }[];
   headToHead: H2HRow[];
+  matches: MatchRecord[];
 }

@@ -16,19 +16,27 @@ interface Props {
 }
 
 export function RatingChart({ timeline }: Props) {
-  const data = timeline.map((e) => {
-    const delta = e.ratingAfter - (e.ratingBefore ?? e.ratingAfter);
-    return {
-      date: e.date,
-      ts: new Date(e.date + "T00:00:00").getTime(),
-      rating: e.ratingAfter,
-      name: e.name,
-      ratingBefore: e.ratingBefore,
-      delta,
-      won: e.won,
-      lost: e.lost,
-    };
-  });
+  const data = (() => {
+    const seen = new Map<number, number>();
+    return timeline.map((e) => {
+      const delta = e.ratingAfter - (e.ratingBefore ?? e.ratingAfter);
+      let ts = new Date(e.date + "T00:00:00").getTime();
+      // Offset duplicates by 1ms so Recharts tick keys are unique
+      const count = seen.get(ts) ?? 0;
+      seen.set(ts, count + 1);
+      ts += count;
+      return {
+        date: e.date,
+        ts,
+        rating: e.ratingAfter,
+        name: e.name,
+        ratingBefore: e.ratingBefore,
+        delta,
+        won: e.won,
+        lost: e.lost,
+      };
+    });
+  })();
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800 p-6">
@@ -43,6 +51,7 @@ export function RatingChart({ timeline }: Props) {
             type="number"
             scale="time"
             domain={["dataMin", "dataMax"]}
+            allowDuplicatedCategory={false}
             tick={{ fill: "#94a3b8", fontSize: 11 }}
             tickFormatter={(v: number) =>
               new Date(v).toLocaleDateString("en-US", {

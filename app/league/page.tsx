@@ -1,7 +1,5 @@
 import { getAnalysis } from "@/lib/analysis";
-import { StatsRow } from "@/components/league/stats-row";
-import { RatingChart } from "@/components/league/rating-chart";
-import { HeadToHeadTable } from "@/components/league/head-to-head-table";
+import { LeagueDashboard } from "@/components/league/league-dashboard";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -47,9 +45,7 @@ export default async function LeaguePage() {
         </p>
       </div>
 
-      <StatsRow player={data.player} />
-      <RatingChart timeline={data.ratingTimeline} />
-      <HeadToHeadTable rows={data.headToHead} />
+      <LeagueDashboard data={data} />
     </div>
   );
 }

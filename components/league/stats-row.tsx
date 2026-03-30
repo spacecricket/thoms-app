@@ -1,4 +1,14 @@
-import type { AnalysisData } from "@/lib/types";
+"use client";
+
+export interface StatsRowProps {
+  currentRating: number;
+  totalEvents: number;
+  totalMatches: number;
+  totalWon: number;
+  totalLost: number;
+  winPct: number;
+  ratingGain: number;
+}
 
 function StatCard({
   value,
@@ -23,23 +33,23 @@ function StatCard({
   );
 }
 
-export function StatsRow({ player }: { player: AnalysisData["player"] }) {
+export function StatsRow(props: StatsRowProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
       <StatCard
-        value={player.currentRating}
+        value={props.currentRating}
         label="Current Rating"
         color="green"
       />
-      <StatCard value={player.totalEvents} label="Events Played" />
-      <StatCard value={player.totalMatches} label="Total Matches" />
-      <StatCard value={player.totalWon} label="Matches Won" color="green" />
-      <StatCard value={player.totalLost} label="Matches Lost" color="red" />
-      <StatCard value={`${player.winPct}%`} label="Win Rate" />
+      <StatCard value={props.totalEvents} label="Events Played" />
+      <StatCard value={props.totalMatches} label="Total Matches" />
+      <StatCard value={props.totalWon} label="Matches Won" color="green" />
+      <StatCard value={props.totalLost} label="Matches Lost" color="red" />
+      <StatCard value={`${props.winPct}%`} label="Win Rate" />
       <StatCard
-        value={`${player.ratingGain >= 0 ? "+" : ""}${player.ratingGain}`}
+        value={`${props.ratingGain >= 0 ? "+" : ""}${props.ratingGain}`}
         label="Rating Gain"
-        color="green"
+        color={props.ratingGain >= 0 ? "green" : "red"}
       />
     </div>
   );

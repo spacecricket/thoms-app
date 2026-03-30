@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { AnalysisData, H2HRow, ScrapedEventDetail } from "./types";
+import type { AnalysisData, H2HRow, MatchRecord, ScrapedEventDetail } from "./types";
 
 export async function getAnalysis(): Promise<AnalysisData> {
   const events = await prisma.event.findMany({
@@ -74,6 +74,12 @@ export async function getAnalysis(): Promise<AnalysisData> {
       lost: e.lost,
     })),
     headToHead,
+    matches: matches.map((m) => ({
+      opponentName: m.opponentName,
+      score: m.score,
+      thomWon: m.thomWon,
+      eventId: m.eventId,
+    })),
   };
 }
 
