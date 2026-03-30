@@ -38,7 +38,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800 p-6">
-      <div className="mb-5 flex items-center justify-between gap-4">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold text-slate-100">
           Head-to-Head vs All Opponents
         </h2>
@@ -48,7 +48,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter opponent..."
-            className="w-48 rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 sm:w-48"
           />
           {filter && (
             <button
@@ -66,7 +66,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-slate-700 text-left text-xs uppercase tracking-wider text-slate-400">
-              <th className="px-3 py-2">#</th>
+              <th className="hidden px-3 py-2 sm:table-cell">#</th>
               <th
                 className="cursor-pointer px-3 py-2"
                 onClick={() => handleSort("opponentName")}
@@ -80,7 +80,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
               >
                 Win%{arrow("winPct")}
               </th>
-              <th className="px-3 py-2" style={{ minWidth: 120 }}>
+              <th className="hidden px-3 py-2 sm:table-cell" style={{ minWidth: 120 }}>
                 Win Rate
               </th>
               <th
@@ -102,7 +102,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                       setExpandedRow(isExpanded ? null : row.opponentName)
                     }
                   >
-                    <td className="px-3 py-2 text-slate-500">{i + 1}</td>
+                    <td className="hidden px-3 py-2 text-slate-500 sm:table-cell">{i + 1}</td>
                     <td className="px-3 py-2 font-semibold text-slate-100">
                       <span className="inline-block text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : undefined, marginRight: "0.75rem" }}>▶</span>
                       {row.opponentName}
@@ -116,7 +116,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                       </span>
                     </td>
                     <td className="px-3 py-2">{row.winPct}%</td>
-                    <td className="px-3 py-2">
+                    <td className="hidden px-3 py-2 sm:table-cell">
                       <div className="h-2 w-24 overflow-hidden rounded bg-slate-700">
                         <div
                           className="h-full rounded bg-emerald-500"
@@ -128,9 +128,13 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                   </tr>
                   {isExpanded && row.matchDetails.length > 0 && (
                     <tr>
-                      <td colSpan={6} className="bg-slate-900/50 px-3 pb-3 pt-1">
+                      <td colSpan={4} className="bg-slate-900/50 px-3 pb-3 pt-1 sm:hidden">
                         <MatchDetailsInline row={row} />
                       </td>
+                      <td colSpan={6} className="hidden bg-slate-900/50 px-3 pb-3 pt-1 sm:table-cell">
+                        <MatchDetailsInline row={row} />
+                      </td>
+
                     </tr>
                   )}
                 </Fragment>
