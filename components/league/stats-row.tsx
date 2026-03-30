@@ -35,16 +35,9 @@ function StatCard({
 
 export function StatsRow(props: StatsRowProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-      <StatCard
-        value={props.currentRating}
-        label="Current Rating"
-        color="green"
-      />
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <StatCard value={props.totalEvents} label="Events Played" />
       <StatCard value={props.totalMatches} label="Total Matches" />
-      <StatCard value={props.totalWon} label="Matches Won" color="green" />
-      <StatCard value={props.totalLost} label="Matches Lost" color="red" />
       <StatCard value={`${props.winPct}%`} label="Win Rate" />
       <StatCard
         value={`${props.ratingGain >= 0 ? "+" : ""}${props.ratingGain}`}

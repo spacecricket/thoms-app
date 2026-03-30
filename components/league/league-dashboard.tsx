@@ -137,13 +137,18 @@ export function LeagueDashboard({ data }: Props) {
       {/* Sticky header: title + slider */}
       <div className="sticky top-0 z-30 -mx-3 bg-slate-900/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
-              Thom&#39;s Leagues
-            </h1>
-            <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">
-              USATT# 287622
-            </p>
+          <div className="flex items-baseline gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
+                Thom&#39;s Leagues
+              </h1>
+              <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">
+                USATT# 287622
+              </p>
+            </div>
+            <span className="text-2xl font-bold text-emerald-400 sm:text-3xl">
+              {filteredStats.currentRating}
+            </span>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
             <span className="shrink-0 text-xs text-slate-400">From</span>
