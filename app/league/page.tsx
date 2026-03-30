@@ -30,7 +30,7 @@ export default async function LeaguePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-10">
       <LeagueDashboard data={data} />
     </div>
   );

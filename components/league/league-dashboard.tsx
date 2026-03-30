@@ -135,7 +135,7 @@ export function LeagueDashboard({ data }: Props) {
   return (
     <div className="space-y-8">
       {/* Sticky header: title + slider */}
-      <div className="sticky top-0 z-30 -mx-6 bg-slate-900/95 px-6 py-4 backdrop-blur">
+      <div className="sticky top-0 z-30 -mx-3 bg-slate-900/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">

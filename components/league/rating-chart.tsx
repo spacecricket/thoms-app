@@ -39,7 +39,7 @@ export function RatingChart({ timeline }: Props) {
   })();
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800 p-6">
+    <div className="rounded-xl border border-slate-700 bg-slate-800 p-3 sm:p-6">
       <h2 className="mb-5 text-lg font-semibold text-slate-100">
         League Rating Over Time
       </h2>

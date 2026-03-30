@@ -37,7 +37,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
     sortKey === key ? (sortDesc ? " ↓" : " ↑") : "";
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800 p-6">
+    <div className="rounded-xl border border-slate-700 bg-slate-800 p-3 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold text-slate-100">
           Head-to-Head vs All Opponents
@@ -109,15 +109,17 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                         <span>{row.opponentName}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-2">
-                      <span className="mr-1 inline-block rounded bg-emerald-900/60 px-2 py-0.5 text-xs font-semibold text-emerald-400">
-                        {row.won}W
-                      </span>
-                      <span className="inline-block rounded bg-red-900/60 px-2 py-0.5 text-xs font-semibold text-red-400">
-                        {row.lost}L
-                      </span>
+                    <td className="px-2 py-2 sm:px-3">
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-1">
+                        <span className="inline-block rounded bg-emerald-900/60 px-1.5 py-0.5 text-xs font-semibold text-emerald-400">
+                          {row.won}W
+                        </span>
+                        <span className="inline-block rounded bg-red-900/60 px-1.5 py-0.5 text-xs font-semibold text-red-400">
+                          {row.lost}L
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-3 py-2">{row.winPct}%</td>
+                    <td className="px-2 py-2 sm:px-3">{row.winPct}%</td>
                     <td className="hidden px-3 py-2 sm:table-cell">
                       <div className="h-2 w-24 overflow-hidden rounded bg-slate-700">
                         <div
@@ -126,7 +128,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                         />
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-slate-400">{row.total}</td>
+                    <td className="px-2 py-2 text-slate-400 sm:px-3">{row.total}</td>
                   </tr>
                   {isExpanded && row.matchDetails.length > 0 && (
                     <tr>
