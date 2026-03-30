@@ -138,18 +138,6 @@ export function parseEventsListText(
     const name =
       nameEnd > 0 ? afterDate.slice(0, nameEnd).trim() : "Unknown Event";
 
-    // Rating: "Rating{before}{after}{change}" or "RatingUnrated{after}{change}"
-    const ratingMatch = block.match(
-      /Rating(?:(Unrated)|(\d{3,4}))(\d{3,4})(-?\d+)/,
-    );
-    let ratingBefore: number | null = null;
-    let ratingAfter = 0;
-    if (ratingMatch) {
-      ratingBefore =
-        ratingMatch[1] === "Unrated" ? null : Number(ratingMatch[2]);
-      ratingAfter = Number(ratingMatch[3]);
-    }
-
     // Played/Won/Lost: "N played...N won...N lost"
     const playedMatch = block.match(
       /(\d+)\s*played.*?(\d+)\s*won.*?(\d+)\s*lost/s,
@@ -157,6 +145,19 @@ export function parseEventsListText(
     const played = playedMatch ? Number(playedMatch[1]) : 0;
     const won = playedMatch ? Number(playedMatch[2]) : 0;
     const lost = playedMatch ? Number(playedMatch[3]) : 0;
+
+    const blockParts = block.split(/\n+/);
+
+    let ratingIndex = 0
+    for (; ratingIndex < blockParts.length; ratingIndex++) {
+      if (blockParts[ratingIndex] === 'Rating') {
+        break;
+      }
+    }
+
+    const ratingBeforeText = blockParts[ratingIndex + 1];
+    const ratingBefore = ratingBeforeText.toLowerCase() === 'unrated' ? 0 : Number(ratingBeforeText);
+    const ratingAfter = Number(blockParts[ratingIndex + 2]);
 
     results.push({
       id,
@@ -182,18 +183,26 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
   content = content.slice(startIdx + "Matches Found".length);
   const endIdx = content.indexOf("You've reached");
   if (endIdx !== -1) content = content.slice(0, endIdx);
+  // Split at each Winner marker (with optional 2-letter initials prefix)
+  const blocks = content.split(/(?=Winner)/);
 
-  // Split at each [A-Z]{2}Winner marker
-  const blocks = content.split(/(?=[A-Z]{2}Winner)/);
 
   for (const block of blocks) {
     const trimmed = block.trim();
-    if (!trimmed.match(/^[A-Z]{2}Winner/) || !trimmed.includes("Match Result"))
+    if (!/^Winner/.test(trimmed) || !trimmed.includes("Match Result"))
       continue;
 
-    const thomWon = trimmed.startsWith("TSWinner");
+    const matchParts = trimmed.split(/\n+/);
+    const winner = matchParts[2];
+    const score = matchParts[7];
+    const loser = matchParts[10];
+    const thomWon = winner === 'Thom Sonavane';
+    let thomRatingBefore = thomWon ? matchParts[3] : matchParts[11];
+    if (thomRatingBefore === 'Unrated') thomRatingBefore = '0';
+    const thomRatingAfter = thomWon ? matchParts[4] : matchParts[12];
+    const opponentName = thomWon ? loser : winner;
 
-    const scoreMatch = trimmed.match(/Match Result'?(\d+)-(\d+)'?/);
+    const scoreMatch = score.match(/'?(\d+)-(\d+)'?/);
     if (!scoreMatch) continue;
     const s1 = Number(scoreMatch[1]);
     const s2 = Number(scoreMatch[2]);
@@ -201,25 +210,16 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
     const opponentSets = thomWon ? Math.min(s1, s2) : Math.max(s1, s2);
     const scoreString = `${thomSets}-${opponentSets}`;
 
-    // Split on USATT# to find opponent
-    const parts = trimmed.split(/USATT#\s*(\d+)/);
-    // parts: [prefix, id1, text1, id2, text2, ...]
-    let opponentName: string | null = null;
-    for (let i = 1; i < parts.length - 1; i += 2) {
-      const uid = parts[i].trim();
-      if (uid === THOM_USATT) continue;
-      const nameMatch = parts[i + 1].trim().match(/^([A-Za-z ,.'\\-]+)/);
-      if (nameMatch) {
-        opponentName = nameMatch[1]
-          .trim()
-          .replace(/,\s*$/, "")
-          .replace(/\s+/g, " ");
-        break;
-      }
-    }
-
     if (opponentName) {
-      matches.push({ opponentName, thomSets, opponentSets, scoreString, thomWon });
+      matches.push({
+        opponentName,
+        thomSets,
+        opponentSets,
+        scoreString,
+        thomWon,
+        thomRatingBefore: Number(thomRatingBefore),
+        thomRatingAfter: Number(thomRatingAfter),
+      });
     }
   }
 
@@ -255,19 +255,12 @@ export async function scrapeEventDetail(
   // Strip any leading noise from "You need to enable JavaScript..." etc.
   const name = rawName.replace(/^.*?app\.\s*/, "").trim() || "Unknown Event";
 
-  const ratingMatch = rawText.match(
-    /Rating(?:(Unrated)|(\d{3,4}))(\d{3,4})/,
-  );
-  const ratingBefore = ratingMatch
-    ? ratingMatch[1] === "Unrated"
-      ? null
-      : Number(ratingMatch[2])
-    : null;
-  const ratingAfter = ratingMatch ? Number(ratingMatch[3]) : 0;
-
   const matches = parseMatchHistoryText(rawText);
   const won = matches.filter((m) => m.thomWon).length;
   const lost = matches.filter((m) => !m.thomWon).length;
+
+  const ratingBefore = matches[0].thomRatingBefore;
+  const ratingAfter = matches[matches.length - 1].thomRatingAfter;
 
   return {
     id: eventId,

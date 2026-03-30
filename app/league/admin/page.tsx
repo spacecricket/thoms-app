@@ -184,6 +184,9 @@ export default function AdminPage() {
                   <span className="font-semibold text-slate-100">
                     {event.name}
                   </span>
+                  <span className="font-extralight text-xs text-slate-100">
+                    {event.id}
+                  </span>
                   {event.alreadyImported && (
                     <span className="rounded bg-emerald-900/60 px-2 py-0.5 text-xs text-emerald-400">
                       Imported

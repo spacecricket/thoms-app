@@ -17,6 +17,8 @@ export interface ScrapedMatch {
   opponentSets: number;
   scoreString: string;
   thomWon: boolean;
+  thomRatingBefore: number;
+  thomRatingAfter: number;
 }
 
 export interface ScrapedEventDetail extends ScrapedEvent {

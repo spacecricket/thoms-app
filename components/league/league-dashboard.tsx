@@ -13,16 +13,20 @@ interface Props {
 export function LeagueDashboard({ data }: Props) {
   const { ratingTimeline, matches } = data;
 
-  const dates = useMemo(
-    () => ratingTimeline.map((e) => e.date),
+  // Deduplicated sorted dates for the slider
+  const uniqueDates = useMemo(
+    () => [...new Set(ratingTimeline.map((e) => e.date))],
     [ratingTimeline],
   );
 
   const [startIdx, setStartIdx] = useState(0);
 
+  const startDate = uniqueDates[startIdx] ?? uniqueDates[0];
+
+  // Filter timeline: include all events on or after the selected start date
   const filteredTimeline = useMemo(
-    () => ratingTimeline.slice(startIdx),
-    [ratingTimeline, startIdx],
+    () => ratingTimeline.filter((e) => e.date >= startDate),
+    [ratingTimeline, startDate],
   );
 
   // Build a set of event IDs that are within the date range
@@ -95,22 +99,38 @@ export function LeagueDashboard({ data }: Props) {
     const totalLost = filteredMatches.filter((m) => !m.thomWon).length;
     const totalMatches = totalWon + totalLost;
     const first = filteredTimeline[0];
-    const last = filteredTimeline[filteredTimeline.length - 1];
+
+    // For current rating, use the max ratingAfter from the latest date
+    // (same-day events may have different ratingAfter values)
+    const lastDate = filteredTimeline.length > 0
+      ? filteredTimeline[filteredTimeline.length - 1].date
+      : null;
+    const lastDayEvents = lastDate
+      ? filteredTimeline.filter((e) => e.date === lastDate)
+      : [];
+    const currentRating = lastDayEvents.length > 0
+      ? Math.max(...lastDayEvents.map((e) => e.ratingAfter))
+      : 0;
+
+    // For rating gain, use the min ratingBefore from the first date
+    const firstDate = first?.date ?? null;
+    const firstDayEvents = firstDate
+      ? filteredTimeline.filter((e) => e.date === firstDate)
+      : [];
+    const startRating = firstDayEvents.length > 0
+      ? Math.min(...firstDayEvents.map((e) => e.ratingBefore ?? e.ratingAfter))
+      : 0;
+
     return {
-      currentRating: last?.ratingAfter ?? 0,
+      currentRating,
       totalEvents: filteredTimeline.length,
       totalMatches,
       totalWon,
       totalLost,
       winPct: totalMatches > 0 ? Math.round((100 * totalWon) / totalMatches) : 0,
-      ratingGain:
-        last && first
-          ? last.ratingAfter - (first.ratingBefore ?? first.ratingAfter)
-          : 0,
+      ratingGain: filteredTimeline.length > 0 ? currentRating - startRating : 0,
     };
   }, [matches, activeEventIds, filteredTimeline]);
-
-  const startDate = dates[startIdx];
 
   return (
     <>
@@ -121,7 +141,7 @@ export function LeagueDashboard({ data }: Props) {
           <input
               type="range"
               min={0}
-              max={dates.length - 1}
+              max={uniqueDates.length - 1}
               value={startIdx}
               onChange={(e) => setStartIdx(Number(e.target.value))}
               className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-blue-500"

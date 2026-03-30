@@ -57,14 +57,25 @@ export async function getAnalysis(): Promise<AnalysisData> {
 
   const totalWon = matches.filter((m) => m.thomWon).length;
   const totalLost = matches.filter((m) => !m.thomWon).length;
-  const first = events[0];
-  const last = events[events.length - 1];
+
+  // Handle same-day events: use max ratingAfter from last date, min ratingBefore from first date
+  const lastDate = events.length > 0 ? events[events.length - 1].eventDate.getTime() : null;
+  const lastDayEvents = lastDate !== null ? events.filter((e) => e.eventDate.getTime() === lastDate) : [];
+  const currentRating = lastDayEvents.length > 0
+    ? Math.max(...lastDayEvents.map((e) => e.ratingAfter))
+    : 0;
+
+  const firstDate = events.length > 0 ? events[0].eventDate.getTime() : null;
+  const firstDayEvents = firstDate !== null ? events.filter((e) => e.eventDate.getTime() === firstDate) : [];
+  const startRating = firstDayEvents.length > 0
+    ? Math.min(...firstDayEvents.map((e) => e.ratingBefore ?? e.ratingAfter))
+    : 0;
 
   return {
     player: {
       name: "Thom Sonavane",
       usattId: "287622",
-      currentRating: last?.ratingAfter ?? 0,
+      currentRating,
       totalEvents: events.length,
       totalMatches: totalWon + totalLost,
       totalWon,
@@ -73,10 +84,7 @@ export async function getAnalysis(): Promise<AnalysisData> {
         totalWon + totalLost > 0
           ? Math.round((100 * totalWon) / (totalWon + totalLost))
           : 0,
-      ratingGain:
-        last && first
-          ? last.ratingAfter - (first.ratingBefore ?? first.ratingAfter)
-          : 0,
+      ratingGain: events.length > 0 ? currentRating - startRating : 0,
     },
     ratingTimeline: events.map((e) => ({
       id: e.id,
