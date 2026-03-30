@@ -21,10 +21,10 @@ export function RatingChart({ timeline }: Props) {
     return timeline.map((e) => {
       const delta = e.ratingAfter - (e.ratingBefore ?? e.ratingAfter);
       let ts = new Date(e.date + "T00:00:00").getTime();
-      // Offset duplicates by 1ms so Recharts tick keys are unique
+      // Offset same-day events by 1 day each so both dots are visually distinct
       const count = seen.get(ts) ?? 0;
       seen.set(ts, count + 1);
-      ts += count;
+      ts += count * 24 * 60 * 60 * 1000;
       return {
         date: e.date,
         ts,
