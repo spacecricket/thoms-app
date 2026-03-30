@@ -133,29 +133,40 @@ export function LeagueDashboard({ data }: Props) {
   }, [matches, activeEventIds, filteredTimeline]);
 
   return (
-    <>
-      {/* Date range slider */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800 px-6 py-4">
-        <div className="flex items-center gap-4">
-          <label className="shrink-0 text-sm text-slate-400">From:</label>
-          <input
+    <div className="space-y-8">
+      {/* Sticky header: title + slider */}
+      <div className="sticky top-0 z-30 -mx-6 bg-slate-900/95 px-6 py-4 backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
+              Thom&#39;s Leagues
+            </h1>
+            <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">
+              USATT# 287622 · Rating:{" "}
+              <strong className="text-slate-200">{filteredStats.currentRating}</strong>
+              {" · "}{filteredStats.totalEvents} events · {filteredStats.totalMatches} matches
+            </p>
+          </div>
+          <div className="flex min-w-0 items-center gap-3 sm:w-72">
+            <span className="shrink-0 text-xs text-slate-400">From</span>
+            <input
               type="range"
               min={0}
               max={uniqueDates.length - 1}
               value={startIdx}
               onChange={(e) => setStartIdx(Number(e.target.value))}
               className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-blue-500"
-          />
-          <span className="shrink-0 text-sm font-medium text-slate-200">
-            {startDate}
-          </span>
+            />
+            <span className="shrink-0 text-xs font-medium text-slate-200">
+              {startDate}
+            </span>
+          </div>
         </div>
       </div>
 
       <StatsRow {...filteredStats} />
       <RatingChart timeline={filteredTimeline} />
-
       <HeadToHeadTable rows={filteredH2H} />
-    </>
+    </div>
   );
 }

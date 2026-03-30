@@ -5,7 +5,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Thom Sonavane — League Analysis",
+  title: "Thom's Leagues",
   description: "USATT league rating history and head-to-head records",
 };
 
@@ -30,21 +30,7 @@ export default async function LeaguePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-100">
-          Thom Sonavane — League Analysis
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          USATT# {data.player.usattId} · League Rating:{" "}
-          <strong className="text-slate-200">
-            {data.player.currentRating}
-          </strong>{" "}
-          · {data.player.totalEvents} events · {data.player.totalMatches}{" "}
-          matches
-        </p>
-      </div>
-
+    <div className="mx-auto max-w-6xl px-6 py-10">
       <LeagueDashboard data={data} />
     </div>
   );
