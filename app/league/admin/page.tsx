@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { ScrapedEvent } from "@/lib/types";
 
 export default function AdminPage() {
-  const [password, setPassword] = useState(() =>
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("admin_pw") ?? ""
-      : "",
-  );
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_pw");
+    if (saved) setPassword(saved);
+  }, []);
   const [authenticated, setAuthenticated] = useState(false);
   const [events, setEvents] = useState<ScrapedEvent[]>([]);
   const [loading, setLoading] = useState(false);
