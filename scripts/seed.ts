@@ -74,6 +74,14 @@ const matchData = matchDataRaw as Record<
   { opponent: string; score: string; thom_won: boolean }[]
 >;
 
+function parseScore(score: string, thomWon: boolean) {
+  const [a, b] = score.split("-").map(Number);
+  return {
+    thomSets: thomWon ? Math.max(a, b) : Math.min(a, b),
+    opponentSets: thomWon ? Math.min(a, b) : Math.max(a, b),
+  };
+}
+
 async function seed() {
   console.log("Seeding database...");
 
@@ -105,12 +113,17 @@ async function seed() {
     const matches = matchData[comp.id];
     if (matches?.length) {
       await prisma.match.createMany({
-        data: matches.map((m) => ({
-          eventId: comp.id,
-          opponentName: m.opponent,
-          score: m.score,
-          thomWon: m.thom_won,
-        })),
+        data: matches.map((m) => {
+          const { thomSets, opponentSets } = parseScore(m.score, m.thom_won);
+          return {
+            eventId: comp.id,
+            opponentName: m.opponent,
+            thomSets,
+            opponentSets,
+            scoreString: `${thomSets}-${opponentSets}`,
+            thomWon: m.thom_won,
+          };
+        }),
       });
     }
 

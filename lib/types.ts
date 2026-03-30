@@ -13,7 +13,9 @@ export interface ScrapedEvent {
 
 export interface ScrapedMatch {
   opponentName: string;
-  score: string;
+  thomSets: number;
+  opponentSets: number;
+  scoreString: string;
   thomWon: boolean;
 }
 
@@ -24,7 +26,8 @@ export interface ScrapedEventDetail extends ScrapedEvent {
 export interface H2HMatchDetail {
   date: string;
   eventName: string;
-  score: string;
+  thomSets: number;
+  opponentSets: number;
   thomWon: boolean;
 }
 
@@ -40,7 +43,8 @@ export interface H2HRow {
 
 export interface MatchRecord {
   opponentName: string;
-  score: string;
+  thomSets: number;
+  opponentSets: number;
   thomWon: boolean;
   eventId: string;
 }

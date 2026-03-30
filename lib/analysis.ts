@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { AnalysisData, H2HRow, MatchRecord, ScrapedEventDetail } from "./types";
+import type { AnalysisData, H2HRow, H2HMatchDetail, MatchRecord, ScrapedEventDetail } from "./types";
 
 export async function getAnalysis(): Promise<AnalysisData> {
   const events = await prisma.event.findMany({
@@ -16,7 +16,7 @@ export async function getAnalysis(): Promise<AnalysisData> {
   // Build head-to-head from matches
   const h2hMap = new Map<
     string,
-    { won: number; lost: number; scores: string[]; matchDetails: { date: string; eventName: string; score: string; thomWon: boolean }[] }
+    { won: number; lost: number; scores: string[]; matchDetails: H2HMatchDetail[] }
   >();
   for (const m of matches) {
     const existing = h2hMap.get(m.opponentName) ?? {
@@ -27,12 +27,13 @@ export async function getAnalysis(): Promise<AnalysisData> {
     };
     if (m.thomWon) existing.won++;
     else existing.lost++;
-    existing.scores.push(`${m.thomWon ? "W" : "L"} ${m.score}`);
+    existing.scores.push(`${m.thomWon ? "W" : "L"} ${m.thomSets}-${m.opponentSets}`);
     const evt = eventMap.get(m.eventId);
     existing.matchDetails.push({
       date: evt?.eventDate.toISOString().split("T")[0] ?? "",
       eventName: evt?.name ?? "",
-      score: m.score,
+      thomSets: m.thomSets,
+      opponentSets: m.opponentSets,
       thomWon: m.thomWon,
     });
     h2hMap.set(m.opponentName, existing);
@@ -89,7 +90,8 @@ export async function getAnalysis(): Promise<AnalysisData> {
     headToHead,
     matches: matches.map((m) => ({
       opponentName: m.opponentName,
-      score: m.score,
+      thomSets: m.thomSets,
+      opponentSets: m.opponentSets,
       thomWon: m.thomWon,
       eventId: m.eventId,
     })),
@@ -128,7 +130,9 @@ export async function upsertEvent(detail: ScrapedEventDetail): Promise<number> {
         data: detail.matches.map((m) => ({
           eventId: detail.id,
           opponentName: m.opponentName,
-          score: m.score,
+          thomSets: m.thomSets,
+          opponentSets: m.opponentSets,
+          scoreString: m.scoreString,
           thomWon: m.thomWon,
         })),
       });

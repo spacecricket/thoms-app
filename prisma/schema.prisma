@@ -32,7 +32,9 @@ model Match {
   eventId      String   @map("event_id")
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   opponentName String   @map("opponent_name")
-  score        String // e.g. "3-1", "0-3"
+  thomSets     Int      @map("thom_sets")
+  opponentSets Int      @map("opponent_sets")
+  scoreString  String   @map("score_string") // e.g. "3-1", kept for posterity
   thomWon      Boolean  @map("thom_won")
   createdAt    DateTime @default(now()) @map("created_at")
 

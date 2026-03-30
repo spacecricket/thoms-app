@@ -135,7 +135,7 @@ function MatchDetailsInline({ row }: { row: H2HRow }) {
           }}
         >
           <span className="shrink-0 font-medium">
-            {m.thomWon ? "W" : "L"} {m.score}
+            {m.thomWon ? "W" : "L"} {m.thomSets}-{m.opponentSets}
           </span>
           <span className="ml-3 truncate text-right text-slate-400">
             {new Date(m.date + "T00:00:00").toLocaleDateString("en-US", {

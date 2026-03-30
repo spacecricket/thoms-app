@@ -56,12 +56,13 @@ export function LeagueDashboard({ data }: Props) {
       };
       if (m.thomWon) existing.won++;
       else existing.lost++;
-      existing.scores.push(`${m.thomWon ? "W" : "L"} ${m.score}`);
+      existing.scores.push(`${m.thomWon ? "W" : "L"} ${m.thomSets}-${m.opponentSets}`);
       const evt = eventLookup.get(m.eventId);
       existing.matchDetails.push({
         date: evt?.date ?? "",
         eventName: evt?.name ?? "",
-        score: m.score,
+        thomSets: m.thomSets,
+        opponentSets: m.opponentSets,
         thomWon: m.thomWon,
       });
       h2hMap.set(m.opponentName, existing);

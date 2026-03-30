@@ -195,7 +195,11 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
 
     const scoreMatch = trimmed.match(/Match Result'?(\d+)-(\d+)'?/);
     if (!scoreMatch) continue;
-    const score = `${scoreMatch[1]}-${scoreMatch[2]}`;
+    const s1 = Number(scoreMatch[1]);
+    const s2 = Number(scoreMatch[2]);
+    const thomSets = thomWon ? Math.max(s1, s2) : Math.min(s1, s2);
+    const opponentSets = thomWon ? Math.min(s1, s2) : Math.max(s1, s2);
+    const scoreString = `${thomSets}-${opponentSets}`;
 
     // Split on USATT# to find opponent
     const parts = trimmed.split(/USATT#\s*(\d+)/);
@@ -215,7 +219,7 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
     }
 
     if (opponentName) {
-      matches.push({ opponentName, score, thomWon });
+      matches.push({ opponentName, thomSets, opponentSets, scoreString, thomWon });
     }
   }
 
