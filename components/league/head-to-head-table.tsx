@@ -9,8 +9,15 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("total");
   const [sortDesc, setSortDesc] = useState(true);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
 
-  const sorted = [...rows].sort((a, b) => {
+  const filtered = filter
+    ? rows.filter((r) =>
+        r.opponentName.toLowerCase().includes(filter.toLowerCase()),
+      )
+    : rows;
+
+  const sorted = [...filtered].sort((a, b) => {
     const dir = sortDesc ? -1 : 1;
     if (sortKey === "opponentName") {
       return dir * a.opponentName.localeCompare(b.opponentName);
@@ -31,9 +38,30 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800 p-6">
-      <h2 className="mb-5 text-lg font-semibold text-slate-100">
-        Head-to-Head vs All Opponents
-      </h2>
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold text-slate-100">
+          Head-to-Head vs All Opponents
+        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter opponent..."
+            className="w-48 rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500"
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter("")}
+              className="text-sm text-slate-400 hover:text-slate-200"
+              aria-label="Clear filter"
+              style={{ lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
