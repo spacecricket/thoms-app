@@ -146,9 +146,12 @@ export function LeagueDashboard({ data }: Props) {
                 USATT# 287622
               </p>
             </div>
-            <span className="text-2xl font-bold text-emerald-400 sm:text-3xl">
-              {filteredStats.currentRating}
-            </span>
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold text-emerald-400 sm:text-3xl">
+                {filteredStats.currentRating}
+              </span>
+              <span className="text-xs text-slate-400">Rating</span>
+            </div>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
             <span className="shrink-0 text-xs text-slate-400">From</span>
