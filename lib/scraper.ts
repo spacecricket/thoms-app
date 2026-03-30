@@ -202,6 +202,10 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
     const thomRatingAfter = thomWon ? matchParts[4] : matchParts[12];
     const opponentName = thomWon ? loser : winner;
 
+    // Extract opponent USATT ID — all USATT# numbers in the block, pick the non-Thom one
+    const usattIds = [...trimmed.matchAll(/USATT#\s*(\d+)/g)].map(m => m[1]);
+    const opponentUsattId = usattIds.find(id => id !== THOM_USATT) ?? "";
+
     const scoreMatch = score.match(/'?(\d+)-(\d+)'?/);
     if (!scoreMatch) continue;
     const s1 = Number(scoreMatch[1]);
@@ -210,8 +214,9 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
     const opponentSets = thomWon ? Math.min(s1, s2) : Math.max(s1, s2);
     const scoreString = `${thomSets}-${opponentSets}`;
 
-    if (opponentName) {
+    if (opponentName && opponentUsattId) {
       matches.push({
+        opponentUsattId,
         opponentName,
         thomSets,
         opponentSets,

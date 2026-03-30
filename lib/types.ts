@@ -12,6 +12,7 @@ export interface ScrapedEvent {
 }
 
 export interface ScrapedMatch {
+  opponentUsattId: string;
   opponentName: string;
   thomSets: number;
   opponentSets: number;
@@ -44,6 +45,7 @@ export interface H2HRow {
 }
 
 export interface MatchRecord {
+  opponentUsattId: string;
   opponentName: string;
   thomSets: number;
   opponentSets: number;

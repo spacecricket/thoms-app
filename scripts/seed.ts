@@ -1,19 +1,27 @@
 /**
  * Seed the database with previously scraped data.
+ * Parses USATT IDs and opponent names directly from the raw page text files.
  *
  * Usage: npx tsx scripts/seed.ts
  *
  * Requires DATABASE_URL in .env
  */
 import "dotenv/config";
+import fs from "fs";
+import path from "path";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import matchDataRaw from "./match_data.json";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is not set");
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
+
+const THOM_USATT = "287622";
+const RAW_PAGES_DIR = path.join(
+  __dirname,
+  "../../legato/.claude/worktrees/wizardly-snyder/raw_pages",
+);
 
 // Competition data scraped from the events list page (all 50 events, oldest→newest)
 const COMPETITIONS = [
@@ -69,17 +77,80 @@ const COMPETITIONS = [
   { id: "55659", date: "2026-03-29", name: "Spttc Junior League 3/28/26", rb: 801, ra: 813, won: 4, lost: 0 },
 ] as const;
 
-const matchData = matchDataRaw as Record<
-  string,
-  { opponent: string; score: string; thom_won: boolean }[]
->;
+interface ParsedMatch {
+  opponentUsattId: string;
+  opponentName: string;
+  thomSets: number;
+  opponentSets: number;
+  scoreString: string;
+  thomWon: boolean;
+}
 
-function parseScore(score: string, thomWon: boolean) {
-  const [a, b] = score.split("-").map(Number);
-  return {
-    thomSets: thomWon ? Math.max(a, b) : Math.min(a, b),
-    opponentSets: thomWon ? Math.min(a, b) : Math.max(a, b),
-  };
+/**
+ * Parse matches from the old single-line raw page format, extracting USATT IDs.
+ * Format: [XX]WinnerUSATT# XXXXXXX<Name><rating><rating>Match Result'N-N'[TS]USATT# 287622...
+ */
+function parseRawPage(text: string): ParsedMatch[] {
+  const matches: ParsedMatch[] = [];
+
+  let content = text;
+  const startIdx = content.indexOf("Matches Found");
+  if (startIdx === -1) return [];
+  content = content.slice(startIdx + "Matches Found".length);
+  const endIdx = content.indexOf("You've reached");
+  if (endIdx !== -1) content = content.slice(0, endIdx);
+
+  // Split on Winner boundaries (with or without 2-letter initials)
+  const blocks = content.split(/(?=[A-Z]{0,2}Winner)/);
+
+  for (const block of blocks) {
+    const trimmed = block.trim();
+    if (!/^[A-Z]{0,2}Winner/.test(trimmed) || !trimmed.includes("Match Result"))
+      continue;
+
+    // Extract all USATT IDs — find the non-Thom one as opponent
+    const usattMatches = [...trimmed.matchAll(/USATT#\s*(\d+)/g)];
+    const usattIds = usattMatches.map(m => m[1]);
+    const opponentUsattId = usattIds.find(id => id !== THOM_USATT) ?? "";
+    if (!opponentUsattId) continue;
+
+    // Determine winner: TSWinner = Thom won; bare Winner with Thom's ID first = Thom won
+    const thomWon =
+      trimmed.startsWith("TSWinner") ||
+      (trimmed.startsWith("Winner") && trimmed.startsWith(`WinnerUSATT# ${THOM_USATT}`));
+
+    // Extract score
+    const scoreMatch = trimmed.match(/Match Result'?(\d+)-(\d+)'?/);
+    if (!scoreMatch) continue;
+    const s1 = Number(scoreMatch[1]);
+    const s2 = Number(scoreMatch[2]);
+    const thomSets = thomWon ? Math.max(s1, s2) : Math.min(s1, s2);
+    const opponentSets = thomWon ? Math.min(s1, s2) : Math.max(s1, s2);
+
+    // Extract opponent name from the text after their USATT# ID
+    const opponentUsattPos = trimmed.indexOf(`USATT# ${opponentUsattId}`);
+    const afterId = trimmed.slice(opponentUsattPos + `USATT# ${opponentUsattId}`.length);
+    const nameMatch = afterId.match(/^([A-Za-z ,.'\\-]+)/);
+    if (!nameMatch) continue;
+    const opponentName = nameMatch[1]
+      .trim()
+      .replace(/Unrated$/, "")
+      .replace(/,\s*$/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!opponentName) continue;
+
+    matches.push({
+      opponentUsattId,
+      opponentName,
+      thomSets,
+      opponentSets,
+      scoreString: `${thomSets}-${opponentSets}`,
+      thomWon,
+    });
+  }
+
+  return matches;
 }
 
 async function seed() {
@@ -107,34 +178,46 @@ async function seed() {
       },
     });
 
-    // Delete old matches and insert fresh
     await prisma.match.deleteMany({ where: { eventId: comp.id } });
 
-    const matches = matchData[comp.id];
-    if (matches?.length) {
+    const rawPath = path.join(RAW_PAGES_DIR, `${comp.id}.txt`);
+    if (!fs.existsSync(rawPath)) {
+      console.log(`  ${comp.id}: ${comp.name} — no raw page, skipping matches`);
+      continue;
+    }
+
+    const rawText = fs.readFileSync(rawPath, "utf8");
+    const matches = parseRawPage(rawText);
+
+    if (matches.length) {
+      // Upsert all opponents
+      for (const m of matches) {
+        await prisma.opponent.upsert({
+          where: { usattId: m.opponentUsattId },
+          create: { usattId: m.opponentUsattId, name: m.opponentName },
+          update: { name: m.opponentName },
+        });
+      }
+
       await prisma.match.createMany({
-        data: matches.map((m) => {
-          const { thomSets, opponentSets } = parseScore(m.score, m.thom_won);
-          return {
-            eventId: comp.id,
-            opponentName: m.opponent,
-            thomSets,
-            opponentSets,
-            scoreString: `${thomSets}-${opponentSets}`,
-            thomWon: m.thom_won,
-          };
-        }),
+        data: matches.map((m) => ({
+          eventId: comp.id,
+          opponentUsattId: m.opponentUsattId,
+          thomSets: m.thomSets,
+          opponentSets: m.opponentSets,
+          scoreString: m.scoreString,
+          thomWon: m.thomWon,
+        })),
       });
     }
 
-    console.log(
-      `  ${comp.id}: ${comp.name} (${comp.date}) — ${matches?.length ?? 0} matches`,
-    );
+    console.log(`  ${comp.id}: ${comp.name} (${comp.date}) — ${matches.length} matches`);
   }
 
   const eventCount = await prisma.event.count();
   const matchCount = await prisma.match.count();
-  console.log(`\nDone: ${eventCount} events, ${matchCount} matches`);
+  const opponentCount = await prisma.opponent.count();
+  console.log(`\nDone: ${eventCount} events, ${matchCount} matches, ${opponentCount} opponents`);
 }
 
 seed()

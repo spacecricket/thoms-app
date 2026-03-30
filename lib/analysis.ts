@@ -8,18 +8,20 @@ export async function getAnalysis(): Promise<AnalysisData> {
 
   const matches = await prisma.match.findMany({
     orderBy: { id: "asc" },
+    include: { opponent: true },
   });
 
   // Build event lookup for match details
   const eventMap = new Map(events.map((e) => [e.id, e]));
 
-  // Build head-to-head from matches
+  // Build head-to-head keyed by opponentUsattId, display by name
   const h2hMap = new Map<
     string,
-    { won: number; lost: number; scores: string[]; matchDetails: H2HMatchDetail[] }
+    { opponentName: string; won: number; lost: number; scores: string[]; matchDetails: H2HMatchDetail[] }
   >();
   for (const m of matches) {
-    const existing = h2hMap.get(m.opponentName) ?? {
+    const existing = h2hMap.get(m.opponentUsattId) ?? {
+      opponentName: m.opponent.name,
       won: 0,
       lost: 0,
       scores: [],
@@ -36,11 +38,11 @@ export async function getAnalysis(): Promise<AnalysisData> {
       opponentSets: m.opponentSets,
       thomWon: m.thomWon,
     });
-    h2hMap.set(m.opponentName, existing);
+    h2hMap.set(m.opponentUsattId, existing);
   }
 
   const headToHead: H2HRow[] = [...h2hMap.entries()]
-    .map(([opponentName, { won, lost, scores, matchDetails }]) => {
+    .map(([, { opponentName, won, lost, scores, matchDetails }]) => {
       const total = won + lost;
       matchDetails.sort((a, b) => a.date.localeCompare(b.date));
       return {
@@ -97,7 +99,8 @@ export async function getAnalysis(): Promise<AnalysisData> {
     })),
     headToHead,
     matches: matches.map((m) => ({
-      opponentName: m.opponentName,
+      opponentUsattId: m.opponentUsattId,
+      opponentName: m.opponent.name,
       thomSets: m.thomSets,
       opponentSets: m.opponentSets,
       thomWon: m.thomWon,
@@ -134,10 +137,19 @@ export async function upsertEvent(detail: ScrapedEventDetail): Promise<number> {
     await tx.match.deleteMany({ where: { eventId: detail.id } });
 
     if (detail.matches.length > 0) {
+      // Upsert all opponents first (name may have changed/corrected)
+      for (const m of detail.matches) {
+        await tx.opponent.upsert({
+          where: { usattId: m.opponentUsattId },
+          create: { usattId: m.opponentUsattId, name: m.opponentName },
+          update: { name: m.opponentName },
+        });
+      }
+
       await tx.match.createMany({
         data: detail.matches.map((m) => ({
           eventId: detail.id,
-          opponentName: m.opponentName,
+          opponentUsattId: m.opponentUsattId,
           thomSets: m.thomSets,
           opponentSets: m.opponentSets,
           scoreString: m.scoreString,

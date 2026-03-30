@@ -44,15 +44,16 @@ export function LeagueDashboard({ data }: Props) {
     return map;
   }, [ratingTimeline]);
 
-  // Recompute H2H from raw matches filtered by active events
+  // Recompute H2H from raw matches filtered by active events, keyed by usattId
   const filteredH2H: H2HRow[] = useMemo(() => {
     const h2hMap = new Map<
       string,
-      { won: number; lost: number; scores: string[]; matchDetails: H2HMatchDetail[] }
+      { opponentName: string; won: number; lost: number; scores: string[]; matchDetails: H2HMatchDetail[] }
     >();
     for (const m of matches) {
       if (!activeEventIds.has(m.eventId)) continue;
-      const existing = h2hMap.get(m.opponentName) ?? {
+      const existing = h2hMap.get(m.opponentUsattId) ?? {
+        opponentName: m.opponentName,
         won: 0,
         lost: 0,
         scores: [],
@@ -69,12 +70,11 @@ export function LeagueDashboard({ data }: Props) {
         opponentSets: m.opponentSets,
         thomWon: m.thomWon,
       });
-      h2hMap.set(m.opponentName, existing);
+      h2hMap.set(m.opponentUsattId, existing);
     }
     return [...h2hMap.entries()]
-      .map(([opponentName, { won, lost, scores, matchDetails }]) => {
+      .map(([, { opponentName, won, lost, scores, matchDetails }]) => {
         const total = won + lost;
-        // Sort match details by date ascending
         matchDetails.sort((a, b) => a.date.localeCompare(b.date));
         return {
           opponentName,
