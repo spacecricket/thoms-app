@@ -104,8 +104,10 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                   >
                     <td className="hidden px-3 py-2 text-slate-500 sm:table-cell">{i + 1}</td>
                     <td className="px-3 py-2 font-semibold text-slate-100">
-                      <span className="inline-block text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : undefined, marginRight: "0.75rem" }}>▶</span>
-                      {row.opponentName}
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 shrink-0 text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : undefined }}>▶</span>
+                        <span>{row.opponentName}</span>
+                      </div>
                     </td>
                     <td className="px-3 py-2">
                       <span className="mr-1 inline-block rounded bg-emerald-900/60 px-2 py-0.5 text-xs font-semibold text-emerald-400">
