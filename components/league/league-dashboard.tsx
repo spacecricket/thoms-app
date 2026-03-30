@@ -142,12 +142,10 @@ export function LeagueDashboard({ data }: Props) {
               Thom&#39;s Leagues
             </h1>
             <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">
-              USATT# 287622 · Rating:{" "}
-              <strong className="text-slate-200">{filteredStats.currentRating}</strong>
-              {" · "}{filteredStats.totalEvents} events · {filteredStats.totalMatches} matches
+              USATT# 287622
             </p>
           </div>
-          <div className="flex min-w-0 items-center gap-3 sm:w-72">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
             <span className="shrink-0 text-xs text-slate-400">From</span>
             <input
               type="range"
