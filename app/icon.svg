@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Paddle face -->
+  <circle cx="16" cy="13" r="11" fill="#cc1111" stroke="#111" stroke-width="1.5"/>
+  <!-- Handle -->
+  <rect x="13" y="23" width="6" height="9" rx="2.5" fill="#8B5E3C" stroke="#5a3a1a" stroke-width="1"/>
+</svg>
