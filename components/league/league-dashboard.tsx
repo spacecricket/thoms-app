@@ -174,7 +174,10 @@ export function LeagueDashboard({ data }: Props) {
               max={uniqueDates.length - 1}
               value={startIdx}
               onChange={(e) => setStartIdx(Number(e.target.value))}
-              className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-blue-500"
+              className="h-2 flex-1 cursor-pointer appearance-none rounded-lg accent-emerald-500"
+              style={{
+                background: `linear-gradient(to right, #334155 ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%, #22c55e ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%)`,
+              }}
             />
             <span className="shrink-0 font-mono text-xs font-medium text-slate-200">
               {startDate}
