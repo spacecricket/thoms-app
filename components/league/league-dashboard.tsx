@@ -163,7 +163,7 @@ export function LeagueDashboard({ data }: Props) {
               <span className="tabular-nums text-2xl font-bold text-emerald-400 sm:text-3xl">
                 {filteredStats.currentRating}
               </span>
-              <span className="text-xs text-slate-400">Rating</span>
+              <span className="text-xs text-slate-400">Current Rating</span>
             </div>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
