@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RatingChart } from "./rating-chart";
 import { HeadToHeadTable } from "./head-to-head-table";
 import { StatsRow } from "./stats-row";
@@ -12,6 +12,19 @@ interface Props {
 
 export function LeagueDashboard({ data }: Props) {
   const { ratingTimeline, matches } = data;
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setHeaderHeight(entry.borderBoxSize[0].blockSize);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Deduplicated sorted dates for the slider
   const uniqueDates = useMemo(
@@ -135,7 +148,7 @@ export function LeagueDashboard({ data }: Props) {
   return (
     <div className="space-y-8">
       {/* Sticky header: title + slider */}
-      <div className="sticky top-0 z-30 -mx-3 bg-slate-900/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 sm:py-4">
+      <div ref={headerRef} className="sticky top-0 z-30 -mx-3 bg-slate-900/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-baseline gap-4">
             <div>
@@ -172,7 +185,7 @@ export function LeagueDashboard({ data }: Props) {
 
       <StatsRow {...filteredStats} />
       <RatingChart timeline={filteredTimeline} />
-      <HeadToHeadTable rows={filteredH2H} />
+      <HeadToHeadTable rows={filteredH2H} stickyTop={headerHeight} />
     </div>
   );
 }

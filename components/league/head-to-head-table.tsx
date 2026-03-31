@@ -5,7 +5,7 @@ import type { H2HRow } from "@/lib/types";
 
 type SortKey = "total" | "won" | "lost" | "winPct" | "opponentName";
 
-export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
+export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stickyTop?: number }) {
   const [sortKey, setSortKey] = useState<SortKey>("total");
   const [sortDesc, setSortDesc] = useState(true);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -38,7 +38,10 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800 p-3 sm:p-6">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div
+        className="sticky z-20 mb-5 flex flex-col gap-3 bg-slate-800 py-3 sm:flex-row sm:items-center sm:justify-between"
+        style={{ top: stickyTop }}
+      >
         <h2 className="text-lg font-semibold text-slate-100">
           Head-to-Head vs All Opponents
         </h2>
@@ -81,7 +84,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                 Win%{arrow("winPct")}
               </th>
               <th
-                className="w-16 cursor-pointer px-3 py-2"
+                className="w-20 cursor-pointer px-3 py-2"
                 onClick={() => handleSort("total")}
               >
                 Matches{arrow("total")}
