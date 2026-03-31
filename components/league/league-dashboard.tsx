@@ -163,7 +163,7 @@ export function LeagueDashboard({ data }: Props) {
               onChange={(e) => setStartIdx(Number(e.target.value))}
               className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-slate-700 accent-blue-500"
             />
-            <span className="shrink-0 text-xs font-medium text-slate-200">
+            <span className="shrink-0 font-mono text-xs font-medium text-slate-200">
               {startDate}
             </span>
           </div>
