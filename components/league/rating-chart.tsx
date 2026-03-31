@@ -44,7 +44,7 @@ export function RatingChart({ timeline }: Props) {
         League Rating Over Time
       </h2>
       <ResponsiveContainer width="100%" height={350}>
-        <LineChart data={data}>
+        <LineChart data={data} margin={{ top: 5, right: 15, bottom: 5, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
           <XAxis
             dataKey="ts"
@@ -75,6 +75,7 @@ export function RatingChart({ timeline }: Props) {
             }
           />
           <YAxis
+            width={45}
             tick={{ fill: "#94a3b8", fontSize: 11 }}
             domain={[(v: number) => Math.floor(v / 100) * 100, (v: number) => Math.ceil(v / 100) * 100]}
             ticks={(() => {

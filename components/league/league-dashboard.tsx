@@ -147,7 +147,7 @@ export function LeagueDashboard({ data }: Props) {
               </p>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-2xl font-bold text-emerald-400 sm:text-3xl">
+              <span className="tabular-nums text-2xl font-bold text-emerald-400 sm:text-3xl">
                 {filteredStats.currentRating}
               </span>
               <span className="text-xs text-slate-400">Rating</span>

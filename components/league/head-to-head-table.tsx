@@ -63,25 +63,25 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead>
             <tr className="border-b-2 border-slate-700 text-left text-xs uppercase tracking-wider text-slate-400">
-              <th className="hidden px-3 py-2 sm:table-cell">#</th>
+              <th className="hidden w-8 px-3 py-2 sm:table-cell">#</th>
               <th
                 className="cursor-pointer px-3 py-2"
                 onClick={() => handleSort("opponentName")}
               >
                 Opponent{arrow("opponentName")}
               </th>
-              <th className="px-3 py-2">Record</th>
+              <th className="w-16 px-3 py-2 sm:w-20">Record</th>
               <th
-                className="cursor-pointer px-3 py-2"
+                className="w-20 cursor-pointer px-3 py-2 sm:w-24"
                 onClick={() => handleSort("winPct")}
               >
                 Win%{arrow("winPct")}
               </th>
               <th
-                className="cursor-pointer px-3 py-2"
+                className="w-16 cursor-pointer px-3 py-2"
                 onClick={() => handleSort("total")}
               >
                 Matches{arrow("total")}
@@ -118,7 +118,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                     </td>
                     <td className="px-2 py-2 sm:px-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-slate-300">{row.winPct}%</span>
+                        <span className="tabular-nums text-[10px] text-slate-300">{row.winPct}%</span>
                         <div className="h-1.5 w-16 overflow-hidden rounded bg-slate-700 sm:w-20">
                           <div
                             className="h-full rounded bg-emerald-500"
@@ -127,7 +127,7 @@ export function HeadToHeadTable({ rows }: { rows: H2HRow[] }) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-slate-400 sm:px-3">{row.total}</td>
+                    <td className="tabular-nums px-2 py-2 text-slate-400 sm:px-3">{row.total}</td>
                   </tr>
                   {isExpanded && row.matchDetails.length > 0 && (
                     <tr>

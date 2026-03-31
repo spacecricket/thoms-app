@@ -27,7 +27,7 @@ function StatCard({
         : "text-slate-100";
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 sm:px-5 sm:py-4">
-      <div className={`text-2xl font-bold sm:text-3xl ${colorClass}`}>{value}</div>
+      <div className={`tabular-nums text-2xl font-bold sm:text-3xl ${colorClass}`}>{value}</div>
       <div className="mt-0.5 text-xs text-slate-400">{label}</div>
     </div>
   );
