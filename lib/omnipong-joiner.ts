@@ -154,8 +154,10 @@ export async function* joinLeague(
     return;
   }
 
+  yield "Starting browser...";
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
+  yield "Browser ready.";
 
   try {
     const page = await browser.newPage();
