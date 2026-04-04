@@ -5,6 +5,7 @@ import { RatingChart } from "./rating-chart";
 import { HeadToHeadTable } from "./head-to-head-table";
 import { StatsRow } from "./stats-row";
 import type { AnalysisData, H2HRow, H2HMatchDetail } from "@/lib/types";
+import Link from "next/link";
 
 interface Props {
   data: AnalysisData;
@@ -164,6 +165,20 @@ export function LeagueDashboard({ data }: Props) {
                 {filteredStats.currentRating}
               </span>
               <span className="text-xs text-slate-400">Current Rating</span>
+            </div>
+            <div className="flex gap-2 self-center">
+              <Link
+                href="/league/join"
+                className="rounded bg-slate-700/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600 hover:text-slate-100"
+              >
+                Join
+              </Link>
+              <Link
+                href="/league/admin"
+                className="rounded bg-slate-700/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600 hover:text-slate-100"
+              >
+                Admin
+              </Link>
             </div>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
