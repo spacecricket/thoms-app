@@ -76,10 +76,12 @@ async function findLeagueButton(
 ): Promise<{
   type: "Enter" | "Info" | "Results" | "NotFound";
   onclickUrl: string | null;
+  foundName: string | null;
 }> {
   // Search all submit buttons for one whose immediate row matches
   const result = await page.evaluate(
     ({ name, date }) => {
+      const nameLower = name.toLowerCase();
       const buttons = document.querySelectorAll<HTMLInputElement>(
         'input[type="submit"]',
       );
@@ -87,44 +89,53 @@ async function findLeagueButton(
         const val = btn.value;
         if (val !== "Enter" && val !== "Info" && val !== "Results") continue;
 
-        // Walk up to the closest <tr>
         const tr = btn.closest("tr");
         if (!tr) continue;
 
-        // Check that THIS specific row (not a parent) has the league name and date
-        // by looking at the direct text content of cells in this row
         const cells = tr.querySelectorAll("td");
         let rowText = "";
         cells.forEach((cell) => {
           rowText += cell.textContent + "\t";
         });
 
-        if (rowText.includes(name) && rowText.includes(date)) {
+        if (
+          rowText.toLowerCase().includes(nameLower) &&
+          rowText.includes(date)
+        ) {
+          // Extract league name from the row — typically the longest cell text
+          const cellTexts = Array.from(cells).map(c => (c.textContent || "").trim());
+          const foundName = cellTexts.reduce((a, b) => a.length >= b.length ? a : b, "");
           return {
             type: val as "Enter" | "Info" | "Results",
             onclickUrl: btn.getAttribute("onclick") || null,
+            foundName,
           };
         }
       }
-      return { type: "NotFound" as const, onclickUrl: null };
+      return { type: "NotFound" as const, onclickUrl: null, foundName: null };
     },
     { name: leagueName, date: leagueDate },
   );
 
-  // Parse the onclick URL if present
   const urlMatch = result.onclickUrl?.match(/open_window\('([^']+)'/);
   return {
     type: result.type,
     onclickUrl: urlMatch
       ? `https://www.omnipong.com/${urlMatch[1]}`
       : null,
+    foundName: result.foundName,
   };
 }
 
 export async function* joinLeague(
   leagueName: string,
   leagueDate: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<string> {
+  function checkAbort(): boolean {
+    return signal?.aborted ?? false;
+  }
+
   const user = process.env.OMNIPONG_USER;
   const pass = process.env.OMNIPONG_PASS;
 
@@ -185,7 +196,7 @@ export async function* joinLeague(
       yield "Check the league name and date for typos.";
       return;
     }
-    yield `Found league. Button: "${btn.type}".`;
+    yield `Found: "${btn.foundName}". Button: "${btn.type}".`;
 
     // ── Step 4: Check button state & poll ────────────────────────────────
     if (btn.type === "Results") {
@@ -202,32 +213,39 @@ export async function* joinLeague(
 
       if (Date.now() < target1159Utc) {
         yield `${formatTime(getPTNow())} — Waiting until 11:59:01 AM PT for the league to open...`;
-        await sleepUntil(target1159Utc);
+        while (Date.now() < target1159Utc && !checkAbort()) {
+          await sleep(Math.min(2_000, target1159Utc - Date.now()));
+        }
+        if (checkAbort()) return;
       }
 
       yield `${formatTime(getPTNow())} — Reloading page...`;
       await page.goto(LEAGUES_URL, { waitUntil: "networkidle", timeout: 30_000 });
       btn = await findLeagueButton(page, leagueName, leagueDate);
 
-      while (btn.type !== "Enter" && Date.now() < target1200Utc) {
+      while (btn.type !== "Enter" && Date.now() < target1200Utc && !checkAbort()) {
         const waitMs = Math.min(15_000, target1200Utc - Date.now());
         yield `${formatTime(getPTNow())} — Button still shows "Info". Polling in ${Math.round(waitMs / 1000)}s...`;
         await sleep(waitMs);
+        if (checkAbort()) return;
         await page.goto(LEAGUES_URL, { waitUntil: "networkidle", timeout: 30_000 });
         btn = await findLeagueButton(page, leagueName, leagueDate);
       }
+      if (checkAbort()) return;
 
       if (btn.type !== "Enter") {
         yield `${formatTime(getPTNow())} — 12:00 PM reached. High-frequency polling (every 1s)...`;
       }
-      while (btn.type !== "Enter" && Date.now() < target1201Utc) {
+      while (btn.type !== "Enter" && Date.now() < target1201Utc && !checkAbort()) {
         await sleep(1_000);
+        if (checkAbort()) return;
         await page.goto(LEAGUES_URL, { waitUntil: "networkidle", timeout: 30_000 });
         btn = await findLeagueButton(page, leagueName, leagueDate);
         if (btn.type === "Enter") {
           yield `${formatTime(getPTNow())} — Entry is now open!`;
         }
       }
+      if (checkAbort()) return;
 
       if (btn.type !== "Enter") {
         yield `${formatTime(getPTNow())} — Timed out at 12:01 PM PT. League entry never opened (may be full).`;

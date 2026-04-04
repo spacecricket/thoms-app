@@ -15,12 +15,13 @@ function todayMMDDYY(): string {
 
 export default function JoinLeaguePage() {
   const [password, setPassword] = useState("");
-  const [leagueName, setLeagueName] = useState("");
+  const [leagueName, setLeagueName] = useState("Spttc");
   const [leagueDate, setLeagueDate] = useState(todayMMDDYY);
   const [status, setStatus] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
@@ -42,7 +43,15 @@ export default function JoinLeaguePage() {
     [password],
   );
 
+  function handleAbort() {
+    abortRef.current?.abort();
+    setStatus((prev) => [...prev, "Aborted by user."]);
+    setIsRunning(false);
+  }
+
   async function handleJoin() {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setIsRunning(true);
     setStatus([]);
     setError(null);
@@ -53,6 +62,7 @@ export default function JoinLeaguePage() {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({ leagueName, leagueDate }),
+        signal: controller.signal,
       });
 
       if (res.status === 401) {
@@ -102,7 +112,7 @@ export default function JoinLeaguePage() {
     <div className="mx-auto max-w-2xl space-y-6 px-6 py-10">
       <h1 className="text-2xl font-bold text-slate-100">Join League</h1>
       <p className="text-sm text-slate-400">
-        Auto-join an OmniPong league as soon as entry opens.
+        Auto-join the SPTTC league on a given date as soon as entry opens.
       </p>
 
       <div className="space-y-4">
@@ -118,13 +128,13 @@ export default function JoinLeaguePage() {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400">League Name</label>
+          <label className="block text-xs text-slate-400">League Name (contains)</label>
           <input
             type="text"
             value={leagueName}
             onChange={(e) => setLeagueName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-            placeholder='e.g. Spttc Saturday League O-1300 3/07'
+            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500 sm:w-64"
+            placeholder="e.g. Spttc"
           />
         </div>
 
@@ -173,13 +183,23 @@ export default function JoinLeaguePage() {
                     ? "text-red-400"
                     : msg.startsWith("Successfully")
                       ? "text-emerald-400"
-                      : ""
+                      : msg === "Aborted by user."
+                        ? "text-amber-400"
+                        : ""
                 }
               >
                 {msg}
               </div>
             ))}
           </div>
+          {isRunning && (
+            <button
+              onClick={handleAbort}
+              className="mt-3 rounded-lg bg-red-700 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600"
+            >
+              Abort
+            </button>
+          )}
         </div>
       )}
     </div>

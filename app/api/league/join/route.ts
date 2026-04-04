@@ -11,11 +11,16 @@ export async function POST(request: NextRequest) {
 
   const { leagueName, leagueDate } = await request.json();
 
+  const abortController = new AbortController();
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const message of joinLeague(leagueName, leagueDate)) {
+        for await (const message of joinLeague(
+          leagueName,
+          leagueDate,
+          abortController.signal,
+        )) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ message })}\n\n`),
           );
@@ -32,6 +37,10 @@ export async function POST(request: NextRequest) {
       } finally {
         controller.close();
       }
+    },
+    cancel() {
+      // Client disconnected (e.g. abort) — signal the joiner to stop
+      abortController.abort();
     },
   });
 
