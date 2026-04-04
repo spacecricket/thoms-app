@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import type { ScrapedEvent } from "@/lib/types";
 
 export default function AdminPage() {
@@ -107,9 +108,17 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-      <h1 className="text-2xl font-bold text-slate-100">
-        League Admin — Import Events
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-100">
+          League Admin — Import Events
+        </h1>
+        <Link
+          href="/league/join"
+          className="text-sm text-slate-400 hover:text-slate-100"
+        >
+          Join League →
+        </Link>
+      </div>
 
       {/* Auth + Search */}
       <div className="flex flex-wrap items-end gap-3">
