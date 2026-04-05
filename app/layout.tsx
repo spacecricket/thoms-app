@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Thom's Stuff",
+  title: "Thom's Spiderwebs",
   description: "USATT league rating tracker for Thom Sonavane",
 };
 

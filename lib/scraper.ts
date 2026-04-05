@@ -20,17 +20,51 @@ function matchHistoryUrl(eventId: string) {
 
 // ── Playwright helpers ────────────────────────────────────────────────────────
 
-async function fetchRenderedText(url: string): Promise<string> {
+export async function fetchRenderedText(
+  url: string,
+  maxRetries = 3,
+): Promise<string> {
   const { chromium } = await import("playwright");
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
-    await page.waitForTimeout(1_000);
-    return await page.locator("body").innerText();
-  } finally {
-    await browser.close();
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+      // Wait for SPA to finish rendering:
+      // The page goes through: "loading..." → "0 Matches Found" → actual data
+      await page.waitForFunction(
+        () => {
+          const text = document.body.innerText.toLowerCase();
+          if (text.includes("loading")) return false;
+          if (text.includes("0 matches found")) return false;
+          if (text.includes("0 competitions found")) return false;
+          return true;
+        },
+        { timeout: 30_000 },
+      ).catch(() => {});
+      await page.waitForTimeout(1_000);
+      const text = await page.locator("body").innerText();
+
+      // If still stuck on empty/loading state, retry
+      const lower = text.toLowerCase();
+      if (
+        attempt < maxRetries &&
+        (lower.includes("0 matches found") || lower.includes("loading"))
+      ) {
+        console.log(
+          `fetchRenderedText attempt ${attempt}/${maxRetries} got stale page, retrying...`,
+        );
+        continue;
+      }
+      return text;
+    } finally {
+      await browser.close();
+    }
   }
+
+  // Should not reach here, but TypeScript needs it
+  throw new Error("fetchRenderedText: all retries exhausted");
 }
 
 async function fetchEventsListData(): Promise<{
@@ -42,6 +76,14 @@ async function fetchEventsListData(): Promise<{
   try {
     const page = await browser.newPage();
     await page.goto(EVENTS_URL, { waitUntil: "networkidle", timeout: 30_000 });
+    // Wait for SPA to finish rendering
+    await page.waitForFunction(
+      () => {
+        const text = document.body.innerText.toLowerCase();
+        return !text.includes("loading") && !text.includes("0 competitions found");
+      },
+      { timeout: 30_000 },
+    ).catch(() => {});
 
     // Scroll to load all events (infinite scroll, ~10 per batch)
     let prevCount = 0;
@@ -174,6 +216,43 @@ export function parseEventsListText(
   return results;
 }
 
+/**
+ * Parse a player section from a match block.
+ * Format after USATT# line:
+ *   USATT# XXXXXX
+ *   Player Name
+ *   Rating Before (or "Unrated")
+ *   Rating After
+ *   Rating Change
+ */
+function parsePlayerSection(lines: string[]): {
+  usattId: string;
+  name: string;
+  ratingBefore: number;
+  ratingAfter: number;
+} | null {
+  // Find the USATT# line
+  const usattIdx = lines.findIndex((l) => /^USATT#\s*\d+/.test(l));
+  if (usattIdx === -1) return null;
+
+  const usattMatch = lines[usattIdx].match(/USATT#\s*(\d+)/);
+  if (!usattMatch) return null;
+
+  const name = lines[usattIdx + 1]?.trim();
+  let ratingBeforeStr = lines[usattIdx + 2]?.trim();
+  if (ratingBeforeStr === "Unrated") ratingBeforeStr = "0";
+  const ratingAfterStr = lines[usattIdx + 3]?.trim();
+
+  if (!name || !ratingBeforeStr || !ratingAfterStr) return null;
+
+  return {
+    usattId: usattMatch[1],
+    name,
+    ratingBefore: Number(ratingBeforeStr),
+    ratingAfter: Number(ratingAfterStr),
+  };
+}
+
 export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
   const matches: ScrapedMatch[] = [];
 
@@ -183,49 +262,56 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
   content = content.slice(startIdx + "Matches Found".length);
   const endIdx = content.indexOf("You've reached");
   if (endIdx !== -1) content = content.slice(0, endIdx);
-  // Split at each Winner marker (with optional 2-letter initials prefix)
-  const blocks = content.split(/(?=Winner)/);
 
+  // Split on "Match Result" — each match has a winner section before and loser section after
+  const blocks = content.split("Match Result");
 
-  for (const block of blocks) {
-    const trimmed = block.trim();
-    if (!/^Winner/.test(trimmed) || !trimmed.includes("Match Result"))
-      continue;
+  // Blocks come in pairs: [winner section, loser+next winner section, ...]
+  // The winner section ends right before "Match Result", and the loser section starts after it
+  // We process pairs: blocks[i] has the winner, blocks[i+1] starts with the loser (+ score line)
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const winnerBlock = blocks[i];
+    const afterMatchResult = blocks[i + 1];
 
-    const matchParts = trimmed.split(/\n+/);
-    const winner = matchParts[2];
-    const score = matchParts[7];
-    const loser = matchParts[10];
-    const thomWon = winner === 'Thom Sonavane';
-    let thomRatingBefore = thomWon ? matchParts[3] : matchParts[11];
-    if (thomRatingBefore === 'Unrated') thomRatingBefore = '0';
-    const thomRatingAfter = thomWon ? matchParts[4] : matchParts[12];
-    const opponentName = thomWon ? loser : winner;
+    // Winner block: everything from the last "Winner" marker to the end
+    const winnerStart = winnerBlock.lastIndexOf("Winner");
+    if (winnerStart === -1) continue;
+    const winnerLines = winnerBlock.slice(winnerStart).split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
-    // Extract opponent USATT ID — all USATT# numbers in the block, pick the non-Thom one
-    const usattIds = [...trimmed.matchAll(/USATT#\s*(\d+)/g)].map(m => m[1]);
-    const opponentUsattId = usattIds.find(id => id !== THOM_USATT) ?? "";
-
-    const scoreMatch = score.match(/'?(\d+)-(\d+)'?/);
+    // After "Match Result": first line is score, then loser section until next "Winner"
+    const afterLines = afterMatchResult.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    // Score is the first line (e.g., "3-2")
+    const scoreLine = afterLines[0];
+    const scoreMatch = scoreLine?.match(/'?(\d+)-(\d+)'?/);
     if (!scoreMatch) continue;
+
+    // Loser lines: from after score until "Winner" or end
+    const nextWinnerIdx = afterLines.findIndex((l, idx) => idx > 0 && l === "Winner");
+    const loserLines = afterLines.slice(1, nextWinnerIdx === -1 ? undefined : nextWinnerIdx);
+
+    const winner = parsePlayerSection(winnerLines);
+    const loser = parsePlayerSection(loserLines);
+    if (!winner || !loser) continue;
+
+    const thomWon = winner.usattId === THOM_USATT;
+    const thom = thomWon ? winner : loser;
+    const opponent = thomWon ? loser : winner;
+
     const s1 = Number(scoreMatch[1]);
     const s2 = Number(scoreMatch[2]);
     const thomSets = thomWon ? Math.max(s1, s2) : Math.min(s1, s2);
     const opponentSets = thomWon ? Math.min(s1, s2) : Math.max(s1, s2);
-    const scoreString = `${thomSets}-${opponentSets}`;
 
-    if (opponentName && opponentUsattId) {
-      matches.push({
-        opponentUsattId,
-        opponentName,
-        thomSets,
-        opponentSets,
-        scoreString,
-        thomWon,
-        thomRatingBefore: Number(thomRatingBefore),
-        thomRatingAfter: Number(thomRatingAfter),
-      });
-    }
+    matches.push({
+      opponentUsattId: opponent.usattId,
+      opponentName: opponent.name,
+      thomSets,
+      opponentSets,
+      scoreString: `${thomSets}-${opponentSets}`,
+      thomWon,
+      thomRatingBefore: thom.ratingBefore,
+      thomRatingAfter: thom.ratingAfter,
+    });
   }
 
   return matches;
@@ -261,6 +347,11 @@ export async function scrapeEventDetail(
   const name = rawName.replace(/^.*?app\.\s*/, "").trim() || "Unknown Event";
 
   const matches = parseMatchHistoryText(rawText);
+  if (matches.length === 0) {
+    throw new Error(
+      `No matches found for event ${eventId}. Page text starts with: "${rawText.slice(0, 200)}"`,
+    );
+  }
   const won = matches.filter((m) => m.thomWon).length;
   const lost = matches.filter((m) => !m.thomWon).length;
 

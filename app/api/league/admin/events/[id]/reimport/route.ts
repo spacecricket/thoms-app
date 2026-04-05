@@ -32,9 +32,10 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error(`Re-import failed for event ${id}:`, error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Re-import failed for event ${id}:`, message);
     return NextResponse.json(
-      { error: `Failed to re-import event ${id}` },
+      { error: `Failed to re-import event ${id}: ${message}` },
       { status: 500 },
     );
   }

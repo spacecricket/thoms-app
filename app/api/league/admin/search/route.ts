@@ -29,9 +29,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ events: filtered });
   } catch (error) {
-    console.error("Scrape failed:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Scrape failed:", message);
     return NextResponse.json(
-      { error: "Failed to scrape events list" },
+      { error: `Failed to scrape events list: ${message}` },
       { status: 500 },
     );
   }
