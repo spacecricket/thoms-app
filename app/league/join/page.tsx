@@ -28,7 +28,6 @@ export default function JoinLeaguePage() {
     if (saved) setPassword(saved);
   }, []);
 
-  // Auto-scroll the status log
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -110,43 +109,43 @@ export default function JoinLeaguePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-6 py-10">
-      <h1 className="text-2xl font-bold text-slate-100">Join League</h1>
-      <p className="text-sm text-slate-400">
+      <h1 className="text-2xl font-bold text-gray-900">Join League</h1>
+      <p className="text-sm text-gray-500">
         Auto-join the SPTTC league on a given date as soon as entry opens.
       </p>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs text-slate-400">Admin Password</label>
+          <label className="block text-xs text-gray-500">Admin Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500 sm:w-64"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 sm:w-64"
             placeholder="Password"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400">League Name (contains)</label>
+          <label className="block text-xs text-gray-500">League Name (contains)</label>
           <input
             type="text"
             value={leagueName}
             onChange={(e) => setLeagueName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500 sm:w-64"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 sm:w-64"
             placeholder="e.g. Spttc"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-gray-500">
             Date (MM/DD/YY)
           </label>
           <input
             type="text"
             value={leagueDate}
             onChange={(e) => setLeagueDate(e.target.value)}
-            className="mt-1 w-40 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+            className="mt-1 w-40 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
             placeholder="03/07/26"
           />
         </div>
@@ -161,30 +160,30 @@ export default function JoinLeaguePage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
 
       {status.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-slate-300">
+          <h2 className="mb-2 text-sm font-semibold text-gray-700">
             Status Log
           </h2>
           <div
             ref={logRef}
-            className="max-h-80 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-4 font-mono text-xs leading-relaxed text-slate-300"
+            className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4 font-mono text-xs leading-relaxed text-gray-700"
           >
             {status.map((msg, i) => (
               <div
                 key={i}
                 className={
                   msg.startsWith("Error")
-                    ? "text-red-400"
+                    ? "text-red-500"
                     : msg.startsWith("Successfully")
-                      ? "text-emerald-400"
+                      ? "text-emerald-600"
                       : msg === "Aborted by user."
-                        ? "text-amber-400"
+                        ? "text-amber-500"
                         : ""
                 }
               >
@@ -195,7 +194,7 @@ export default function JoinLeaguePage() {
           {isRunning && (
             <button
               onClick={handleAbort}
-              className="mt-3 rounded-lg bg-red-700 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600"
+              className="mt-3 rounded-lg bg-red-500 px-5 py-2 text-sm font-semibold text-white hover:bg-red-400"
             >
               Abort
             </button>

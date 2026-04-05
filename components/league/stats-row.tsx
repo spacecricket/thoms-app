@@ -21,14 +21,14 @@ function StatCard({
 }) {
   const colorClass =
     color === "green"
-      ? "text-emerald-400"
+      ? "text-emerald-600"
       : color === "red"
-        ? "text-red-400"
-        : "text-slate-100";
+        ? "text-red-500"
+        : "text-gray-900";
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 sm:px-5 sm:py-4">
+    <div className="rounded-xl border border-gray-200 bg-white px-3 py-3 sm:px-5 sm:py-4">
       <div className={`tabular-nums text-2xl font-bold sm:text-3xl ${colorClass}`}>{value}</div>
-      <div className="mt-0.5 text-xs text-slate-400">{label}</div>
+      <div className="mt-0.5 text-xs text-gray-500">{label}</div>
     </div>
   );
 }

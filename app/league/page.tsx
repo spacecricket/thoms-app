@@ -15,12 +15,12 @@ export default async function LeaguePage() {
   if (data.ratingTimeline.length === 0) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-        <h1 className="text-2xl font-bold text-slate-100">
+        <h1 className="text-2xl font-bold text-gray-900">
           No data imported yet
         </h1>
-        <p className="mt-3 text-slate-400">
+        <p className="mt-3 text-gray-500">
           Go to the{" "}
-          <Link href="/league/admin" className="text-blue-400 underline">
+          <Link href="/league/admin" className="text-blue-600 underline">
             admin page
           </Link>{" "}
           to import league events.

@@ -43,7 +43,6 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
         setAuthed(true);
         setNotes(data.notes ?? "");
         sessionStorage.setItem(PW_KEY, pw);
-        // Auto-enter edit mode if no notes exist
         if (!data.notes) setEditing(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");
@@ -54,7 +53,6 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
     [eventId],
   );
 
-  // When eventId changes, try to auto-auth with stored password
   useEffect(() => {
     if (!eventId) return;
     setNotes("");
@@ -69,7 +67,6 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
     }
   }, [eventId, fetchNotes]);
 
-  // Focus textarea when entering edit mode
   useEffect(() => {
     if (editing && textareaRef.current) {
       textareaRef.current.focus();
@@ -109,25 +106,25 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="mx-4 w-full max-w-lg rounded-xl border border-slate-600 bg-slate-800 p-5 shadow-2xl"
+        className="mx-4 w-full max-w-lg rounded-xl border border-gray-200 bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-100">
+            <h3 className="text-lg font-semibold text-gray-900">
               Event Notes
             </h3>
             {eventName && (
-              <p className="mt-0.5 text-sm text-slate-400">{eventName}</p>
+              <p className="mt-0.5 text-sm text-gray-500">{eventName}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 transition-colors hover:text-slate-200"
+            className="text-gray-400 transition-colors hover:text-gray-700"
           >
             ✕
           </button>
@@ -135,7 +132,7 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
 
         {!authed ? (
           <form onSubmit={handleLogin} className="space-y-3">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-gray-500">
               Enter password to view or add notes.
             </p>
             <input
@@ -143,10 +140,10 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none"
               autoFocus
             />
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-red-500">{error}</p>}
             <button
               type="submit"
               disabled={loading || !password}
@@ -156,7 +153,7 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
             </button>
           </form>
         ) : loading ? (
-          <p className="text-sm text-slate-400">Loading...</p>
+          <p className="text-sm text-gray-500">Loading...</p>
         ) : editing ? (
           <div className="space-y-3">
             <textarea
@@ -165,9 +162,9 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
               onChange={(e) => setNotes(e.target.value)}
               placeholder="What went well? What didn't? How to improve next time?"
               rows={12}
-              className="w-full resize-y rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              className="w-full resize-y rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none"
             />
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-red-500">{error}</p>}
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
@@ -178,7 +175,7 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
               >
                 Cancel
               </button>
@@ -186,19 +183,19 @@ export function EventNotesDialog({ eventId, eventName, onClose, onNotesChanged }
           </div>
         ) : notes ? (
           <div className="space-y-3">
-            <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-slate-700/50 p-3 text-sm text-slate-200">
+            <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
               {notes}
             </div>
             <button
               onClick={() => setEditing(true)}
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-600"
+              className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
             >
               Edit
             </button>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-slate-400">No notes for this event.</p>
+            <p className="text-sm text-gray-500">No notes for this event.</p>
             <button
               onClick={() => setEditing(true)}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500"

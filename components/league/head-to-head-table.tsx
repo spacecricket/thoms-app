@@ -37,12 +37,12 @@ export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stick
     sortKey === key ? (sortDesc ? " ↓" : " ↑") : "";
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800 p-3 sm:p-6">
+    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-6">
       <div
-        className="sticky z-20 mb-5 flex flex-col gap-3 bg-slate-800 py-3 sm:flex-row sm:items-center sm:justify-between"
+        className="sticky z-20 mb-5 flex flex-col gap-3 bg-white py-3 sm:flex-row sm:items-center sm:justify-between"
         style={{ top: stickyTop }}
       >
-        <h2 className="text-lg font-semibold text-slate-100">
+        <h2 className="text-lg font-semibold text-gray-900">
           Head-to-Head vs All Opponents
         </h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -51,12 +51,12 @@ export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stick
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter opponent..."
-            className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 sm:w-48"
+            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 sm:w-48"
           />
           {filter && (
             <button
               onClick={() => setFilter("")}
-              className="text-sm text-slate-400 hover:text-slate-200"
+              className="text-sm text-gray-400 hover:text-gray-700"
               aria-label="Clear filter"
               style={{ lineHeight: 1 }}
             >
@@ -68,7 +68,7 @@ export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stick
       <div className="overflow-x-auto">
         <table className="w-full table-fixed text-sm">
           <thead>
-            <tr className="border-b-2 border-slate-700 text-left text-xs uppercase tracking-wider text-slate-400">
+            <tr className="border-b-2 border-gray-200 text-left text-xs uppercase tracking-wider text-gray-500">
               <th className="hidden w-8 px-3 py-2 sm:table-cell">#</th>
               <th
                 className="cursor-pointer px-3 py-2"
@@ -97,32 +97,32 @@ export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stick
               return (
                 <Fragment key={row.opponentName}>
                   <tr
-                    className="cursor-pointer border-b border-slate-700/50 hover:bg-slate-700/30"
+                    className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
                     onClick={() =>
                       setExpandedRow(isExpanded ? null : row.opponentName)
                     }
                   >
-                    <td className="hidden px-3 py-2 text-slate-500 sm:table-cell">{i + 1}</td>
-                    <td className="px-3 py-2 font-semibold text-slate-100">
+                    <td className="hidden px-3 py-2 text-gray-400 sm:table-cell">{i + 1}</td>
+                    <td className="px-3 py-2 font-semibold text-gray-900">
                       <div className="flex items-start gap-3">
-                        <span className="mt-0.5 shrink-0 text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : undefined }}>▶</span>
+                        <span className="mt-0.5 shrink-0 text-xs text-gray-400 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : undefined }}>▶</span>
                         <span>{row.opponentName}</span>
                       </div>
                     </td>
                     <td className="px-2 py-2 sm:px-3">
                       <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-1">
-                        <span className="inline-block rounded bg-emerald-900/60 px-1.5 py-0.5 text-xs font-semibold text-emerald-400">
+                        <span className="inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700">
                           {row.won}W
                         </span>
-                        <span className="inline-block rounded bg-red-900/60 px-1.5 py-0.5 text-xs font-semibold text-red-400">
+                        <span className="inline-block rounded bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-600">
                           {row.lost}L
                         </span>
                       </div>
                     </td>
                     <td className="px-2 py-2 sm:px-3">
                       <div className="flex flex-col gap-1">
-                        <span className="tabular-nums text-[10px] text-slate-300">{row.winPct}%</span>
-                        <div className="h-1.5 w-16 overflow-hidden rounded bg-slate-700 sm:w-20">
+                        <span className="tabular-nums text-[10px] text-gray-600">{row.winPct}%</span>
+                        <div className="h-1.5 w-16 overflow-hidden rounded bg-gray-200 sm:w-20">
                           <div
                             className="h-full rounded bg-emerald-500"
                             style={{ width: `${row.winPct}%` }}
@@ -130,14 +130,14 @@ export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stick
                         </div>
                       </div>
                     </td>
-                    <td className="tabular-nums px-2 py-2 text-slate-400 sm:px-3">{row.total}</td>
+                    <td className="tabular-nums px-2 py-2 text-gray-500 sm:px-3">{row.total}</td>
                   </tr>
                   {isExpanded && row.matchDetails.length > 0 && (
                     <tr>
-                      <td colSpan={3} className="bg-slate-900/50 px-3 pb-3 pt-1 sm:hidden">
+                      <td colSpan={3} className="bg-gray-50 px-3 pb-3 pt-1 sm:hidden">
                         <MatchDetailsInline row={row} />
                       </td>
-                      <td colSpan={5} className="hidden bg-slate-900/50 px-3 pb-3 pt-1 sm:table-cell">
+                      <td colSpan={5} className="hidden bg-gray-50 px-3 pb-3 pt-1 sm:table-cell">
                         <MatchDetailsInline row={row} />
                       </td>
 
@@ -149,7 +149,7 @@ export function HeadToHeadTable({ rows, stickyTop = 0 }: { rows: H2HRow[]; stick
           </tbody>
         </table>
         {rows.length === 0 && (
-          <p className="py-10 text-center text-slate-500">
+          <p className="py-10 text-center text-gray-400">
             No match data imported yet.
           </p>
         )}
@@ -167,15 +167,15 @@ function MatchDetailsInline({ row }: { row: H2HRow }) {
           className="flex items-center justify-between rounded px-3 py-1.5 text-xs"
           style={{
             backgroundColor: m.thomWon
-              ? "rgba(5, 150, 105, 0.25)"
-              : "rgba(153, 27, 27, 0.25)",
-            color: m.thomWon ? "#6ee7b7" : "#fca5a5",
+              ? "rgba(5, 150, 105, 0.1)"
+              : "rgba(220, 38, 38, 0.08)",
+            color: m.thomWon ? "#059669" : "#dc2626",
           }}
         >
           <span className="shrink-0 font-medium">
             {m.thomWon ? "W" : "L"} {m.thomSets}-{m.opponentSets}
           </span>
-          <span className="ml-3 truncate text-right text-slate-400">
+          <span className="ml-3 truncate text-right text-gray-500">
             {new Date(m.date + "T00:00:00").toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",

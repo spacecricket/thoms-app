@@ -45,7 +45,7 @@ export function RatingChart({ timeline, onDotClick }: Props) {
   const renderDot = (props: any, isActive = false) => {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null || !payload) return <g />;
-    const fill = payload.delta >= 0 ? "#22c55e" : "#ef4444";
+    const fill = payload.delta >= 0 ? "#16a34a" : "#dc2626";
     const r = isActive ? 6 : 4;
     return (
       <g
@@ -56,7 +56,6 @@ export function RatingChart({ timeline, onDotClick }: Props) {
         }}
         style={{ cursor: "pointer" }}
       >
-        {/* Larger invisible hit area */}
         <circle cx={cx} cy={cy} r={14} fill="transparent" stroke="none" />
         <circle cx={cx} cy={cy} r={r} fill={fill} stroke={fill} />
         {payload.hasNotes && (
@@ -67,13 +66,13 @@ export function RatingChart({ timeline, onDotClick }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800 p-3 sm:p-6">
-      <h2 className="mb-5 text-lg font-semibold text-slate-100">
+    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-6">
+      <h2 className="mb-5 text-lg font-semibold text-gray-900">
         League Rating Over Time
       </h2>
       <ResponsiveContainer width="100%" height={350}>
         <LineChart data={data} margin={{ top: 5, right: 15, bottom: 5, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
             dataKey="ts"
             type="number"
@@ -93,7 +92,7 @@ export function RatingChart({ timeline, onDotClick }: Props) {
               }
               return ticks;
             })()}
-            tick={{ fill: "#94a3b8", fontSize: 11 }}
+            tick={{ fill: "#6b7280", fontSize: 11 }}
             tickFormatter={(v: number) =>
               new Date(v).toLocaleDateString("en-US", {
                 month: "short",
@@ -103,7 +102,7 @@ export function RatingChart({ timeline, onDotClick }: Props) {
           />
           <YAxis
             width={45}
-            tick={{ fill: "#94a3b8", fontSize: 11 }}
+            tick={{ fill: "#6b7280", fontSize: 11 }}
             domain={[(v: number) => Math.floor(v / 100) * 100, (v: number) => Math.ceil(v / 100) * 100]}
             ticks={(() => {
               const min = Math.floor(Math.min(...data.map(d => d.rating)) / 100) * 100;
@@ -116,7 +115,7 @@ export function RatingChart({ timeline, onDotClick }: Props) {
               value: "Rating",
               angle: -90,
               position: "insideLeft",
-              fill: "#94a3b8",
+              fill: "#6b7280",
               fontSize: 12,
             }}
           />
@@ -126,14 +125,14 @@ export function RatingChart({ timeline, onDotClick }: Props) {
               const d = payload[0].payload;
               const sign = d.delta >= 0 ? "+" : "";
               return (
-                <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs shadow-lg">
-                  <div className="font-semibold text-slate-100">{d.date}</div>
-                  <div className="text-slate-400">{d.name}</div>
-                  <div className="mt-1 text-slate-300">
+                <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg">
+                  <div className="font-semibold text-gray-900">{d.date}</div>
+                  <div className="text-gray-500">{d.name}</div>
+                  <div className="mt-1 text-gray-700">
                     {d.ratingBefore ?? "Unrated"} → {d.rating} (
                     <span
                       className={
-                        d.delta >= 0 ? "text-emerald-400" : "text-red-400"
+                        d.delta >= 0 ? "text-emerald-600" : "text-red-500"
                       }
                     >
                       {sign}
@@ -141,11 +140,11 @@ export function RatingChart({ timeline, onDotClick }: Props) {
                     </span>
                     )
                   </div>
-                  <div className="text-slate-400">
+                  <div className="text-gray-500">
                     {d.won}W / {d.lost}L
                   </div>
                   {d.hasNotes && (
-                    <div className="mt-1 text-blue-400">Has notes — click to view</div>
+                    <div className="mt-1 text-blue-600">Has notes — click to view</div>
                   )}
                 </div>
               );
@@ -154,7 +153,7 @@ export function RatingChart({ timeline, onDotClick }: Props) {
           <Line
             type="monotone"
             dataKey="rating"
-            stroke="#60a5fa"
+            stroke="#3b82f6"
             strokeWidth={2.5}
             dot={(props: any) => renderDot(props, false)}
             activeDot={(props: any) => renderDot(props, true)}

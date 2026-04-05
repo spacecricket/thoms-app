@@ -117,8 +117,6 @@ export function LeagueDashboard({ data }: Props) {
     const totalMatches = totalWon + totalLost;
     const first = filteredTimeline[0];
 
-    // For current rating, use the max ratingAfter from the latest date
-    // (same-day events may have different ratingAfter values)
     const lastDate = filteredTimeline.length > 0
       ? filteredTimeline[filteredTimeline.length - 1].date
       : null;
@@ -129,7 +127,6 @@ export function LeagueDashboard({ data }: Props) {
       ? Math.max(...lastDayEvents.map((e) => e.ratingAfter))
       : 0;
 
-    // For rating gain, use the min ratingBefore from the first date
     const firstDate = first?.date ?? null;
     const firstDayEvents = firstDate
       ? filteredTimeline.filter((e) => e.date === firstDate)
@@ -167,43 +164,40 @@ export function LeagueDashboard({ data }: Props) {
   return (
     <div className="space-y-8">
       {/* Sticky header: title + slider */}
-      <div ref={headerRef} className="sticky top-0 z-30 -mx-3 bg-slate-900/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 sm:py-4">
+      <div ref={headerRef} className="sticky top-0 z-30 -mx-3 border-b border-gray-200 bg-white/95 px-3 py-3 backdrop-blur sm:-mx-6 sm:px-6 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-baseline gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl">
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
                 Thom&#39;s Leagues
               </h1>
-              <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">
+              <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">
                 USATT# 287622
               </p>
             </div>
             <div className="flex flex-col items-center">
-              <span className="tabular-nums text-2xl font-bold text-emerald-400 sm:text-3xl">
+              <span className="tabular-nums text-2xl font-bold text-emerald-600 sm:text-3xl">
                 {filteredStats.currentRating}
               </span>
-              <span className="text-xs text-slate-400">Current Rating</span>
+              <span className="text-xs text-gray-500">Current Rating</span>
             </div>
             <div className="flex gap-2 self-center">
               <Link
                 href="/league/join"
-                className="rounded bg-slate-700/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600 hover:text-slate-100"
+                className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >
                 Join
               </Link>
               <Link
                 href="/league/admin"
-                className="rounded bg-slate-700/60 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600 hover:text-slate-100"
+                className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >
                 Admin
               </Link>
             </div>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
-            <span className="shrink-0 text-xs text-slate-400">From</span>
-            <span className="shrink-0 font-mono text-xs font-medium text-slate-200">
-              {startDate}
-            </span>
+            <span className="shrink-0 text-xs text-gray-500">From</span>
             <input
               type="range"
               min={0}
@@ -212,9 +206,12 @@ export function LeagueDashboard({ data }: Props) {
               onChange={(e) => setStartIdx(Number(e.target.value))}
               className="h-2 flex-1 cursor-pointer appearance-none rounded-lg accent-emerald-500"
               style={{
-                background: `linear-gradient(to right, #334155 ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%, #22c55e ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%)`,
+                background: `linear-gradient(to right, #e5e7eb ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%, #16a34a ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%)`,
               }}
             />
+            <span className="shrink-0 font-mono text-xs font-medium text-gray-700">
+              {startDate}
+            </span>
           </div>
         </div>
       </div>

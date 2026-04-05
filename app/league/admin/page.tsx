@@ -71,7 +71,6 @@ export default function AdminPage() {
         ...prev,
         [eventId]: `Imported ${data.matchesImported} matches`,
       }));
-      // Mark as imported in local state
       setEvents((prev) =>
         prev.map((e) =>
           e.id === eventId
@@ -109,12 +108,12 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-100">
+        <h1 className="text-2xl font-bold text-gray-900">
           League Admin — Import Events
         </h1>
         <Link
           href="/league/join"
-          className="text-sm text-slate-400 hover:text-slate-100"
+          className="text-sm text-gray-500 hover:text-gray-900"
         >
           Join League →
         </Link>
@@ -123,24 +122,24 @@ export default function AdminPage() {
       {/* Auth + Search */}
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs text-slate-400">Admin Password</label>
+          <label className="block text-xs text-gray-500">Admin Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+            className="mt-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
             placeholder="Password"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-gray-500">
             Filter by Name
           </label>
           <input
             type="text"
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
-            className="mt-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+            className="mt-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
             placeholder="e.g. Saturday Night"
           />
         </div>
@@ -154,27 +153,27 @@ export default function AdminPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
 
       {authenticated && events.length > 0 && (
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-slate-400">
+          <span className="text-gray-500">
             {events.length} events found · {events.filter((e) => e.alreadyImported).length} already imported
           </span>
           <button
             onClick={handleImportAll}
             disabled={importingIds.size > 0}
-            className="rounded bg-emerald-700 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
           >
             Import All New
           </button>
           <button
             onClick={handleReimportAll}
             disabled={importingIds.size > 0}
-            className="rounded bg-amber-700 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
+            className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-400 disabled:opacity-50"
           >
             Re-import All
           </button>
@@ -187,30 +186,30 @@ export default function AdminPage() {
           {events.map((event) => (
             <div
               key={event.id}
-              className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-700 bg-slate-800 px-4 py-3"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-100">
+                  <span className="font-semibold text-gray-900">
                     {event.name}
                   </span>
-                  <span className="font-extralight text-xs text-slate-100">
+                  <span className="text-xs font-extralight text-gray-400">
                     {event.id}
                   </span>
                   {event.alreadyImported && (
-                    <span className="rounded bg-emerald-900/60 px-2 py-0.5 text-xs text-emerald-400">
+                    <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
                       Imported
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 text-xs text-slate-400">
+                <div className="mt-0.5 text-xs text-gray-500">
                   {event.date} · Rating: {event.ratingBefore ?? "Unrated"} →{" "}
                   {event.ratingAfter} · {event.won}W/{event.lost}L
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {statusMessages[event.id] && (
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-gray-500">
                     {statusMessages[event.id]}
                   </span>
                 )}
@@ -218,7 +217,7 @@ export default function AdminPage() {
                   <button
                     onClick={() => handleImport(event.id, true)}
                     disabled={importingIds.has(event.id)}
-                    className="rounded bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
+                    className="rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-400 disabled:opacity-50"
                   >
                     {importingIds.has(event.id)
                       ? "Scraping..."
