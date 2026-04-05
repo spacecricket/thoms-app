@@ -13,19 +13,22 @@ import type { AnalysisData } from "@/lib/types";
 
 interface Props {
   timeline: AnalysisData["ratingTimeline"];
+  onDotClick: (eventId: string, eventName: string) => void;
 }
 
-export function RatingChart({ timeline }: Props) {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export function RatingChart({ timeline, onDotClick }: Props) {
   const data = (() => {
     const seen = new Map<number, number>();
     return timeline.map((e) => {
       const delta = e.ratingAfter - (e.ratingBefore ?? e.ratingAfter);
       let ts = new Date(e.date + "T00:00:00").getTime();
-      // Offset same-day events by 1 day each so both dots are visually distinct
       const count = seen.get(ts) ?? 0;
       seen.set(ts, count + 1);
       ts += count * 24 * 60 * 60 * 1000;
       return {
+        id: e.id,
         date: e.date,
         ts,
         rating: e.ratingAfter,
@@ -34,9 +37,34 @@ export function RatingChart({ timeline }: Props) {
         delta,
         won: e.won,
         lost: e.lost,
+        hasNotes: e.hasNotes,
       };
     });
   })();
+
+  const renderDot = (props: any, isActive = false) => {
+    const { cx, cy, payload } = props;
+    if (cx == null || cy == null || !payload) return <g />;
+    const fill = payload.delta >= 0 ? "#22c55e" : "#ef4444";
+    const r = isActive ? 6 : 4;
+    return (
+      <g
+        key={`dot-${payload.ts}-${isActive ? "active" : "idle"}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDotClick(payload.id, payload.name);
+        }}
+        style={{ cursor: "pointer" }}
+      >
+        {/* Larger invisible hit area */}
+        <circle cx={cx} cy={cy} r={14} fill="transparent" stroke="none" />
+        <circle cx={cx} cy={cy} r={r} fill={fill} stroke={fill} />
+        {payload.hasNotes && (
+          <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={fill} strokeWidth={1.5} />
+        )}
+      </g>
+    );
+  };
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800 p-3 sm:p-6">
@@ -58,7 +86,6 @@ export function RatingChart({ timeline }: Props) {
               const max = new Date(data[data.length - 1].ts);
               const ticks: number[] = [];
               const d = new Date(min.getFullYear(), min.getMonth(), 1);
-              // Start from the next 1st if min isn't already the 1st
               if (d.getTime() < min.getTime()) d.setMonth(d.getMonth() + 1);
               while (d.getTime() <= max.getTime()) {
                 ticks.push(d.getTime());
@@ -117,6 +144,9 @@ export function RatingChart({ timeline }: Props) {
                   <div className="text-slate-400">
                     {d.won}W / {d.lost}L
                   </div>
+                  {d.hasNotes && (
+                    <div className="mt-1 text-blue-400">Has notes — click to view</div>
+                  )}
                 </div>
               );
             }}
@@ -126,21 +156,8 @@ export function RatingChart({ timeline }: Props) {
             dataKey="rating"
             stroke="#60a5fa"
             strokeWidth={2.5}
-            dot={(props) => {
-              const { cx, cy, payload } = props;
-              const fill = payload.delta >= 0 ? "#22c55e" : "#ef4444";
-              return (
-                <circle
-                  key={`dot-${payload.date}`}
-                  cx={cx}
-                  cy={cy}
-                  r={4}
-                  fill={fill}
-                  stroke={fill}
-                />
-              );
-            }}
-            activeDot={{ r: 6 }}
+            dot={(props: any) => renderDot(props, false)}
+            activeDot={(props: any) => renderDot(props, true)}
           />
         </LineChart>
       </ResponsiveContainer>

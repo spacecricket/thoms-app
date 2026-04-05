@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RatingChart } from "./rating-chart";
 import { HeadToHeadTable } from "./head-to-head-table";
 import { StatsRow } from "./stats-row";
+import { EventNotesDialog } from "./event-notes-dialog";
 import type { AnalysisData, H2HRow, H2HMatchDetail } from "@/lib/types";
 import Link from "next/link";
 
@@ -12,7 +13,9 @@ interface Props {
 }
 
 export function LeagueDashboard({ data }: Props) {
-  const { ratingTimeline, matches } = data;
+  const [timelineData, setTimelineData] = useState(data.ratingTimeline);
+  const { matches } = data;
+  const ratingTimeline = timelineData;
 
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -146,6 +149,21 @@ export function LeagueDashboard({ data }: Props) {
     };
   }, [matches, activeEventIds, filteredTimeline]);
 
+  // Notes dialog state
+  const [notesEventId, setNotesEventId] = useState<string | null>(null);
+  const [notesEventName, setNotesEventName] = useState<string | null>(null);
+
+  const handleDotClick = useCallback((eventId: string, eventName: string) => {
+    setNotesEventId(eventId);
+    setNotesEventName(eventName);
+  }, []);
+
+  const handleNotesChanged = useCallback((eventId: string, hasNotes: boolean) => {
+    setTimelineData((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, hasNotes } : e)),
+    );
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Sticky header: title + slider */}
@@ -183,6 +201,9 @@ export function LeagueDashboard({ data }: Props) {
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
             <span className="shrink-0 text-xs text-slate-400">From</span>
+            <span className="shrink-0 font-mono text-xs font-medium text-slate-200">
+              {startDate}
+            </span>
             <input
               type="range"
               min={0}
@@ -194,16 +215,19 @@ export function LeagueDashboard({ data }: Props) {
                 background: `linear-gradient(to right, #334155 ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%, #22c55e ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%)`,
               }}
             />
-            <span className="shrink-0 font-mono text-xs font-medium text-slate-200">
-              {startDate}
-            </span>
           </div>
         </div>
       </div>
 
       <StatsRow {...filteredStats} />
-      <RatingChart timeline={filteredTimeline} />
+      <RatingChart timeline={filteredTimeline} onDotClick={handleDotClick} />
       <HeadToHeadTable rows={filteredH2H} stickyTop={headerHeight} />
+      <EventNotesDialog
+        eventId={notesEventId}
+        eventName={notesEventName}
+        onClose={() => { setNotesEventId(null); setNotesEventName(null); }}
+        onNotesChanged={handleNotesChanged}
+      />
     </div>
   );
 }

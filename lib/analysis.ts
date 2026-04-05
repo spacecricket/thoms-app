@@ -96,6 +96,7 @@ export async function getAnalysis(): Promise<AnalysisData> {
       ratingAfter: e.ratingAfter,
       won: e.won,
       lost: e.lost,
+      hasNotes: !!e.notes,
     })),
     headToHead,
     matches: matches.map((m) => ({

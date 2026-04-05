@@ -73,6 +73,7 @@ export interface AnalysisData {
     ratingAfter: number;
     won: number;
     lost: number;
+    hasNotes: boolean;
   }[];
   headToHead: H2HRow[];
   matches: MatchRecord[];

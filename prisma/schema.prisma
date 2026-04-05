@@ -16,6 +16,7 @@ model Event {
   ratingAfter  Int      @map("rating_after")
   won          Int      @default(0)
   lost         Int      @default(0)
+  notes        String?  @db.Text
   scrapedAt    DateTime @default(now()) @map("scraped_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
