@@ -13,7 +13,7 @@ import type { AnalysisData } from "@/lib/types";
 
 interface Props {
   timeline: AnalysisData["ratingTimeline"];
-  onDotClick: (eventId: string, eventName: string) => void;
+  onDotClick: (eventId: string) => void;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -52,7 +52,7 @@ export function RatingChart({ timeline, onDotClick }: Props) {
         key={`dot-${payload.ts}-${isActive ? "active" : "idle"}`}
         onClick={(e) => {
           e.stopPropagation();
-          onDotClick(payload.id, payload.name);
+          onDotClick(payload.id);
         }}
         style={{ cursor: "pointer" }}
       >

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RatingChart } from "./rating-chart";
 import { HeadToHeadTable } from "./head-to-head-table";
 import { StatsRow } from "./stats-row";
-import { EventNotesDialog } from "./event-notes-dialog";
+import { EventDetailDialog } from "./event-notes-dialog";
 import type { AnalysisData, H2HRow, H2HMatchDetail } from "@/lib/types";
 import Link from "next/link";
 
@@ -146,13 +146,21 @@ export function LeagueDashboard({ data }: Props) {
     };
   }, [matches, activeEventIds, filteredTimeline]);
 
-  // Notes dialog state
-  const [notesEventId, setNotesEventId] = useState<string | null>(null);
-  const [notesEventName, setNotesEventName] = useState<string | null>(null);
+  // Event detail dialog state
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  const handleDotClick = useCallback((eventId: string, eventName: string) => {
-    setNotesEventId(eventId);
-    setNotesEventName(eventName);
+  const selectedEvent = useMemo(
+    () => ratingTimeline.find((e) => e.id === selectedEventId) ?? null,
+    [ratingTimeline, selectedEventId],
+  );
+
+  const selectedEventMatches = useMemo(
+    () => (selectedEventId ? matches.filter((m) => m.eventId === selectedEventId) : []),
+    [matches, selectedEventId],
+  );
+
+  const handleDotClick = useCallback((eventId: string) => {
+    setSelectedEventId(eventId);
   }, []);
 
   const handleNotesChanged = useCallback((eventId: string, hasNotes: boolean) => {
@@ -219,10 +227,10 @@ export function LeagueDashboard({ data }: Props) {
       <StatsRow {...filteredStats} />
       <RatingChart timeline={filteredTimeline} onDotClick={handleDotClick} />
       <HeadToHeadTable rows={filteredH2H} stickyTop={headerHeight} />
-      <EventNotesDialog
-        eventId={notesEventId}
-        eventName={notesEventName}
-        onClose={() => { setNotesEventId(null); setNotesEventName(null); }}
+      <EventDetailDialog
+        event={selectedEvent}
+        matches={selectedEventMatches}
+        onClose={() => setSelectedEventId(null)}
         onNotesChanged={handleNotesChanged}
       />
     </div>
