@@ -194,7 +194,7 @@ export function LeagueDashboard({ data }: Props) {
                 href="/league/join"
                 className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >
-                Join
+                Join Upcoming
               </Link>
               <Link
                 href="/league/admin"
@@ -206,6 +206,9 @@ export function LeagueDashboard({ data }: Props) {
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
             <span className="shrink-0 text-xs text-gray-500">From</span>
+            <span className="shrink-0 font-mono text-xs font-medium text-gray-700">
+              {startDate}
+            </span>
             <input
               type="range"
               min={0}
@@ -217,9 +220,6 @@ export function LeagueDashboard({ data }: Props) {
                 background: `linear-gradient(to right, #e5e7eb ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%, #16a34a ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%)`,
               }}
             />
-            <span className="shrink-0 font-mono text-xs font-medium text-gray-700">
-              {startDate}
-            </span>
           </div>
         </div>
       </div>
