@@ -220,6 +220,9 @@ export function LeagueDashboard({ data }: Props) {
                 background: `linear-gradient(to right, #e5e7eb ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%, #16a34a ${(startIdx / Math.max(uniqueDates.length - 1, 1)) * 100}%)`,
               }}
             />
+            <span className="shrink-0 font-mono text-xs font-medium text-gray-700">
+              {uniqueDates[uniqueDates.length - 1]}
+            </span>
           </div>
         </div>
       </div>
