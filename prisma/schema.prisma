@@ -53,3 +53,73 @@ model Match {
   @@index([opponentUsattId])
   @@map("matches")
 }
+
+/// A live match recording session (admin-gated, point-by-point stats)
+model LiveMatch {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  opponentName    String      @map("opponent_name")
+  opponentUsattId String?     @map("opponent_usatt_id") // null = "pending" (unknown player)
+
+  /// Date of the match (used to link to a JustGo event later)
+  matchDate       DateTime    @map("match_date") @db.Date
+
+  /// "left" | "right" — Thom's starting side on screen
+  thomSide        String      @map("thom_side")
+  /// "thom" | "opponent" — who won the toss
+  tossWinner      String      @map("toss_winner")
+  /// "thom" | "opponent" — who serves first (toss winner chooses)
+  firstServer     String      @map("first_server")
+
+  /// "active" | "complete"
+  status          String      @default("active")
+
+  /// Linked to a Match.id once the JustGo result is imported
+  linkedMatchId   Int?        @map("linked_match_id")
+
+  // Materialised current state — updated atomically with every point or manual adjustment
+  curSetNumber    Int         @default(1)     @map("cur_set_number")
+  curThomSetScore Int         @default(0)     @map("cur_thom_set_score")
+  curOppSetScore  Int         @default(0)     @map("cur_opp_set_score")
+  curThomSetsWon  Int         @default(0)     @map("cur_thom_sets_won")
+  curOppSetsWon   Int         @default(0)     @map("cur_opp_sets_won")
+  curMatchComplete Boolean    @default(false) @map("cur_match_complete")
+
+  points          LivePoint[]
+
+  @@map("live_matches")
+}
+
+/// A single point within a live match
+model LivePoint {
+  id            String    @id @default(cuid())
+  liveMatchId   String    @map("live_match_id")
+  liveMatch     LiveMatch @relation(fields: [liveMatchId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  setNumber     Int       @map("set_number")   // 1–5
+  pointInSet    Int       @map("point_in_set") // 1-indexed within the set
+  serverThom    Boolean   @map("server_thom")  // true = Thom serves this point
+  thomWon       Boolean   @map("thom_won")
+
+  // Score AFTER this point
+  thomSetScore  Int       @map("thom_set_score")
+  oppSetScore   Int       @map("opp_set_score")
+  thomSetsWon   Int       @map("thom_sets_won")
+  oppSetsWon    Int       @map("opp_sets_won")
+  setComplete   Boolean   @default(false) @map("set_complete")
+  matchComplete Boolean   @default(false) @map("match_complete")
+
+  // Optional shot detail (can be patched after the point is saved)
+  /// "loop"|"push"|"chop"|"smash"|"flick"|"block"|"drive"|"lob"|"serve_ace"|"other"
+  shotType      String?   @map("shot_type")
+  /// "thom" | "opponent" — who hit the last shot
+  shotBy        String?   @map("shot_by")
+  /// "winner" | "unforced_error" | "forced_error"
+  pointType     String?   @map("point_type")
+
+  @@index([liveMatchId])
+  @@map("live_points")
+}

@@ -82,10 +82,13 @@ export function LeagueDashboard({ data }: Props) {
       const evt = eventLookup.get(m.eventId);
       existing.matchDetails.push({
         date: evt?.date ?? "",
+        eventId: m.eventId,
         eventName: evt?.name ?? "",
+        matchId: m.id,
         thomSets: m.thomSets,
         opponentSets: m.opponentSets,
         thomWon: m.thomWon,
+        linkedLiveMatchId: m.linkedLiveMatchId,
       });
       h2hMap.set(m.opponentUsattId, existing);
     }
@@ -195,6 +198,12 @@ export function LeagueDashboard({ data }: Props) {
                 className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >
                 Join Upcoming
+              </Link>
+              <Link
+                href="/league/live"
+                className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-500"
+              >
+                ● Live
               </Link>
               <Link
                 href="/league/admin"

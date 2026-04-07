@@ -28,10 +28,13 @@ export interface ScrapedEventDetail extends ScrapedEvent {
 
 export interface H2HMatchDetail {
   date: string;
+  eventId: string;
   eventName: string;
+  matchId: number;
   thomSets: number;
   opponentSets: number;
   thomWon: boolean;
+  linkedLiveMatchId: string | null;
 }
 
 export interface H2HRow {
@@ -45,12 +48,15 @@ export interface H2HRow {
 }
 
 export interface MatchRecord {
+  id: number;
   opponentUsattId: string;
   opponentName: string;
   thomSets: number;
   opponentSets: number;
   thomWon: boolean;
   eventId: string;
+  /** ID of the linked LiveMatch, if one has been linked by an admin */
+  linkedLiveMatchId: string | null;
 }
 
 export interface AnalysisData {

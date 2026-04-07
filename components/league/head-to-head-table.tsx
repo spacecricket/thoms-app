@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import Link from "next/link";
 import type { H2HRow } from "@/lib/types";
 
 type SortKey = "total" | "won" | "lost" | "winPct" | "opponentName";
@@ -175,15 +176,26 @@ function MatchDetailsInline({ row }: { row: H2HRow }) {
           <span className="shrink-0 font-medium">
             {m.thomWon ? "W" : "L"} {m.thomSets}-{m.opponentSets}
           </span>
-          <span className="ml-3 truncate text-right text-gray-500">
-            {new Date(m.date + "T00:00:00").toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "2-digit",
-            })}
-            {" · "}
-            {m.eventName}
-          </span>
+          <div className="ml-3 flex min-w-0 items-center gap-2">
+            <span className="truncate text-right text-gray-500">
+              {new Date(m.date + "T00:00:00").toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "2-digit",
+              })}
+              {" · "}
+              {m.eventName}
+            </span>
+            {m.linkedLiveMatchId && (
+              <Link
+                href={`/league/${m.eventId}/${m.matchId}/play-by-play`}
+                className="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-600 hover:bg-blue-100"
+                onClick={(e) => e.stopPropagation()}
+              >
+                ▶ Play-by-play
+              </Link>
+            )}
+          </div>
         </div>
       ))}
     </div>

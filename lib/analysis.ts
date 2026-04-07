@@ -11,6 +11,15 @@ export async function getAnalysis(): Promise<AnalysisData> {
     include: { opponent: true },
   });
 
+  // Build lookup: JustGo Match.id → LiveMatch.id (for public play-by-play linking)
+  const linkedLiveMatches = await prisma.liveMatch.findMany({
+    where: { linkedMatchId: { not: null } },
+    select: { id: true, linkedMatchId: true },
+  });
+  const liveMatchByMatchId = new Map(
+    linkedLiveMatches.map((l) => [l.linkedMatchId!, l.id]),
+  );
+
   // Build event lookup for match details
   const eventMap = new Map(events.map((e) => [e.id, e]));
 
@@ -33,10 +42,13 @@ export async function getAnalysis(): Promise<AnalysisData> {
     const evt = eventMap.get(m.eventId);
     existing.matchDetails.push({
       date: evt?.eventDate.toISOString().split("T")[0] ?? "",
+      eventId: m.eventId,
       eventName: evt?.name ?? "",
+      matchId: m.id,
       thomSets: m.thomSets,
       opponentSets: m.opponentSets,
       thomWon: m.thomWon,
+      linkedLiveMatchId: liveMatchByMatchId.get(m.id) ?? null,
     });
     h2hMap.set(m.opponentUsattId, existing);
   }
@@ -100,12 +112,14 @@ export async function getAnalysis(): Promise<AnalysisData> {
     })),
     headToHead,
     matches: matches.map((m) => ({
+      id: m.id,
       opponentUsattId: m.opponentUsattId,
       opponentName: m.opponent.name,
       thomSets: m.thomSets,
       opponentSets: m.opponentSets,
       thomWon: m.thomWon,
       eventId: m.eventId,
+      linkedLiveMatchId: liveMatchByMatchId.get(m.id) ?? null,
     })),
   };
 }

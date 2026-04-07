@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { MatchRecord } from "@/lib/types";
 
 interface TimelineEvent {
@@ -13,6 +14,16 @@ interface TimelineEvent {
   lost: number;
 }
 
+interface LiveMatchCandidate {
+  id: string;
+  opponentName: string;
+  matchDate: string;
+  thomSetsWon: number;
+  oppSetsWon: number;
+  status: string;
+  linkedMatchId: number | null;
+}
+
 interface Props {
   event: TimelineEvent | null;
   matches: MatchRecord[];
@@ -21,6 +32,87 @@ interface Props {
 }
 
 const PW_KEY = "admin_pw";
+
+// ─── Candidate picker dropdown (shown below a match row when linking) ─────────
+
+function CandidatePicker({
+  match,
+  eventDate,
+  password,
+  onLinked,
+  onClose,
+}: {
+  match: MatchRecord & { linkedLiveMatchId: string | null };
+  eventDate: string;
+  password: string;
+  onLinked: (matchId: number, liveId: string) => void;
+  onClose: () => void;
+}) {
+  const [candidates, setCandidates] = useState<LiveMatchCandidate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/league/admin/live?date=${eventDate}`, {
+      headers: { Authorization: `Bearer ${password}` },
+    })
+      .then((r) => r.json())
+      .then((data) =>
+        setCandidates(
+          (data.matches as LiveMatchCandidate[]).filter(
+            (l) => l.linkedMatchId === null || l.linkedMatchId === match.id,
+          ),
+        ),
+      )
+      .finally(() => setLoading(false));
+  }, [match.id, eventDate, password]);
+
+  async function link(liveId: string) {
+    setWorking(true);
+    try {
+      const res = await fetch(`/api/league/admin/live/${liveId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${password}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ linkedMatchId: match.id }),
+      });
+      if (res.ok) { onLinked(match.id, liveId); onClose(); }
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return (
+    <div className="mt-1 rounded-lg border border-gray-200 bg-gray-50 p-2">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-500">Live matches on {eventDate}</span>
+        <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+      </div>
+      {loading ? (
+        <p className="py-2 text-center text-xs text-gray-400">Loading…</p>
+      ) : candidates.length === 0 ? (
+        <p className="py-2 text-center text-xs text-gray-400">No live matches found for this date.</p>
+      ) : (
+        <div className="space-y-1">
+          {candidates.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => !working && link(c.id)}
+              disabled={working}
+              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs hover:bg-white disabled:opacity-50"
+            >
+              <span className="font-medium text-gray-800">vs {c.opponentName}</span>
+              <span className="text-gray-500">
+                {c.thomSetsWon}–{c.oppSetsWon}{c.status !== "complete" ? " (live)" : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main dialog ──────────────────────────────────────────────────────────────
 
 export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: Props) {
   const [showNotes, setShowNotes] = useState(false);
@@ -34,6 +126,10 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Local overrides for linked live match IDs (updated after link/unlink without
+  // requiring a full page reload)
+  const [linkedOverrides, setLinkedOverrides] = useState<Record<number, string | null>>({});
 
   const fetchNotes = useCallback(
     async (pw: string) => {
@@ -73,6 +169,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
     setEditing(false);
     setError("");
     setAuthed(false);
+    setLinkedOverrides({});
     const stored = sessionStorage.getItem(PW_KEY);
     if (stored) {
       setPassword(stored);
@@ -121,6 +218,11 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
   const delta = event.ratingAfter - (event.ratingBefore ?? event.ratingAfter);
   const sign = delta >= 0 ? "+" : "";
 
+  // Resolve linked IDs: local overrides take precedence over the prop value
+  function resolvedLiveId(m: MatchRecord): string | null {
+    return m.id in linkedOverrides ? linkedOverrides[m.id] : m.linkedLiveMatchId;
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
@@ -133,9 +235,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 px-5 pt-5 pb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              {event.name}
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
             <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
               <span>{event.date}</span>
               <span>
@@ -146,10 +246,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
               </span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 transition-colors hover:text-gray-700"
-          >
+          <button onClick={onClose} className="text-gray-400 transition-colors hover:text-gray-700">
             ✕
           </button>
         </div>
@@ -160,30 +257,60 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
             Matches ({event.won}W / {event.lost}L)
           </h4>
           {matches.length > 0 ? (
-            <div className="space-y-1.5">
-              {matches.map((m, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: m.thomWon
-                      ? "rgba(5, 150, 105, 0.08)"
-                      : "rgba(220, 38, 38, 0.06)",
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-semibold ${m.thomWon ? "text-emerald-600" : "text-red-500"}`}
+            <div className="space-y-2">
+              {matches.map((m) => {
+                const liveId = resolvedLiveId(m);
+                return (
+                  <div key={m.id}>
+                    <div
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm"
+                      style={{
+                        backgroundColor: m.thomWon
+                          ? "rgba(5, 150, 105, 0.08)"
+                          : "rgba(220, 38, 38, 0.06)",
+                      }}
                     >
-                      {m.thomWon ? "W" : "L"}
-                    </span>
-                    <span className="text-gray-900">{m.opponentName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold ${m.thomWon ? "text-emerald-600" : "text-red-500"}`}>
+                          {m.thomWon ? "W" : "L"}
+                        </span>
+                        <span className="text-gray-900">{m.opponentName}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="tabular-nums text-gray-500">
+                          {m.thomSets}-{m.opponentSets}
+                        </span>
+                        {liveId && (
+                          <Link
+                            href={`/league/${event.id}/${m.id}/play-by-play`}
+                            className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
+                            onClick={onClose}
+                          >
+                            ▶ Play-by-play
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Admin link/unlink controls */}
+                    {authed && (
+                      <div className="mt-1 pl-3">
+                        <LinkControls
+                          match={{ ...m, linkedLiveMatchId: liveId }}
+                          eventDate={event.date}
+                          password={password}
+                          onLinked={(matchId, newLiveId) =>
+                            setLinkedOverrides((prev) => ({ ...prev, [matchId]: newLiveId }))
+                          }
+                          onUnlinked={(matchId) =>
+                            setLinkedOverrides((prev) => ({ ...prev, [matchId]: null }))
+                          }
+                        />
+                      </div>
+                    )}
                   </div>
-                  <span className="tabular-nums text-gray-500">
-                    {m.thomSets}-{m.opponentSets}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-gray-400">No match data available.</p>
@@ -227,9 +354,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
             <p className="text-sm text-gray-500">Loading notes...</p>
           ) : editing ? (
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Notes
-              </h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Notes</h4>
               <textarea
                 ref={textareaRef}
                 value={notes}
@@ -259,9 +384,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
             </div>
           ) : notes ? (
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Notes
-              </h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Notes</h4>
               <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
                 {notes}
               </div>
@@ -274,9 +397,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
             </div>
           ) : (
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Notes
-              </h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Notes</h4>
               <textarea
                 ref={textareaRef}
                 value={notes}
