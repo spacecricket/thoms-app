@@ -71,6 +71,7 @@ export async function POST(
     shotType?: string;
     shotBy?: Player;
     pointType?: string;
+    backhand?: boolean | null;
   };
 
   if (body.winner !== "thom" && body.winner !== "opponent") {
@@ -140,6 +141,7 @@ export async function POST(
         shotType: body.shotType || null,
         shotBy: body.shotBy || null,
         pointType: body.pointType || null,
+        backhand: body.backhand ?? null,
       },
     }),
     prisma.liveMatch.update({
@@ -257,6 +259,7 @@ export async function PATCH(
     shotType?: string;
     shotBy?: string;
     pointType?: string;
+    backhand?: boolean | null;
   };
 
   const last = await prisma.livePoint.findFirst({
@@ -273,6 +276,7 @@ export async function PATCH(
       ...(body.shotType !== undefined && { shotType: body.shotType || null }),
       ...(body.shotBy !== undefined && { shotBy: body.shotBy || null }),
       ...(body.pointType !== undefined && { pointType: body.pointType || null }),
+      ...(body.backhand !== undefined && { backhand: body.backhand ?? null }),
     },
   });
 
