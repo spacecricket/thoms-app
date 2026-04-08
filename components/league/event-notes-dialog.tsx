@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, Fragment } from "react";
 import Link from "next/link";
 import type { MatchRecord } from "@/lib/types";
 
@@ -109,6 +109,119 @@ function CandidatePicker({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Single match row with inline icon buttons ────────────────────────────────
+
+function MatchRow({
+  m,
+  liveId,
+  eventId,
+  eventDate,
+  authed,
+  password,
+  onClose,
+  onLinked,
+  onUnlinked,
+}: {
+  m: MatchRecord;
+  liveId: string | null;
+  eventId: string;
+  eventDate: string;
+  authed: boolean;
+  password: string;
+  onClose: () => void;
+  onLinked: (matchId: number, liveId: string) => void;
+  onUnlinked: (matchId: number) => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
+
+  async function unlink() {
+    if (!liveId) return;
+    setUnlinking(true);
+    try {
+      const res = await fetch(`/api/league/admin/live/${liveId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${password}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ linkedMatchId: null }),
+      });
+      if (res.ok) onUnlinked(m.id);
+    } finally {
+      setUnlinking(false);
+    }
+  }
+
+  return (
+    <Fragment>
+      <div
+        className="flex items-center justify-between rounded-lg px-3 py-2 text-sm"
+        style={{
+          backgroundColor: m.thomWon
+            ? "rgba(5, 150, 105, 0.08)"
+            : "rgba(220, 38, 38, 0.06)",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span className={`font-semibold ${m.thomWon ? "text-emerald-600" : "text-red-500"}`}>
+            {m.thomWon ? "W" : "L"}
+          </span>
+          <span className="text-gray-900">{m.opponentName}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="tabular-nums text-gray-500">{m.thomSets}-{m.opponentSets}</span>
+
+          {/* Play-by-play link */}
+          {liveId && (
+            <Link
+              href={`/league/${eventId}/${m.id}/play-by-play`}
+              className="flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
+              onClick={onClose}
+              title="View play-by-play"
+            >
+              ▶
+            </Link>
+          )}
+
+          {/* Admin: link / unlink icon buttons */}
+          {authed && (
+            liveId ? (
+              <button
+                onClick={unlink}
+                disabled={unlinking}
+                title="Unlink play-by-play"
+                className="flex items-center rounded-md px-1.5 py-0.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400 disabled:opacity-40"
+              >
+                {unlinking ? "…" : "⊗"}
+              </button>
+            ) : (
+              <button
+                onClick={() => setPickerOpen((o) => !o)}
+                title="Link play-by-play"
+                className={`flex items-center rounded-md px-1.5 py-0.5 transition-colors ${
+                  pickerOpen
+                    ? "bg-blue-100 text-blue-600"
+                    : "text-gray-300 hover:bg-blue-50 hover:text-blue-500"
+                }`}
+              >
+                ⊕
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {pickerOpen && (
+        <CandidatePicker
+          match={{ ...m, linkedLiveMatchId: liveId }}
+          eventDate={eventDate}
+          password={password}
+          onLinked={onLinked}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </Fragment>
   );
 }
 
@@ -257,58 +370,26 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
             Matches ({event.won}W / {event.lost}L)
           </h4>
           {matches.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {matches.map((m) => {
                 const liveId = resolvedLiveId(m);
                 return (
-                  <div key={m.id}>
-                    <div
-                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm"
-                      style={{
-                        backgroundColor: m.thomWon
-                          ? "rgba(5, 150, 105, 0.08)"
-                          : "rgba(220, 38, 38, 0.06)",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`font-semibold ${m.thomWon ? "text-emerald-600" : "text-red-500"}`}>
-                          {m.thomWon ? "W" : "L"}
-                        </span>
-                        <span className="text-gray-900">{m.opponentName}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="tabular-nums text-gray-500">
-                          {m.thomSets}-{m.opponentSets}
-                        </span>
-                        {liveId && (
-                          <Link
-                            href={`/league/${event.id}/${m.id}/play-by-play`}
-                            className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
-                            onClick={onClose}
-                          >
-                            ▶ Play-by-play
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Admin link/unlink controls */}
-                    {authed && (
-                      <div className="mt-1 pl-3">
-                        <LinkControls
-                          match={{ ...m, linkedLiveMatchId: liveId }}
-                          eventDate={event.date}
-                          password={password}
-                          onLinked={(matchId, newLiveId) =>
-                            setLinkedOverrides((prev) => ({ ...prev, [matchId]: newLiveId }))
-                          }
-                          onUnlinked={(matchId) =>
-                            setLinkedOverrides((prev) => ({ ...prev, [matchId]: null }))
-                          }
-                        />
-                      </div>
-                    )}
-                  </div>
+                  <MatchRow
+                    key={m.id}
+                    m={m}
+                    liveId={liveId}
+                    eventId={event.id}
+                    eventDate={event.date}
+                    authed={authed}
+                    password={password}
+                    onClose={onClose}
+                    onLinked={(matchId, newLiveId) =>
+                      setLinkedOverrides((prev) => ({ ...prev, [matchId]: newLiveId }))
+                    }
+                    onUnlinked={(matchId) =>
+                      setLinkedOverrides((prev) => ({ ...prev, [matchId]: null }))
+                    }
+                  />
                 );
               })}
             </div>
