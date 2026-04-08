@@ -20,8 +20,8 @@ export default async function LeaguePage() {
         </h1>
         <p className="mt-3 text-gray-500">
           Go to the{" "}
-          <Link href="/league/admin" className="text-blue-600 underline">
-            admin page
+          <Link href="/leagues/import" className="text-blue-600 underline">
+            import page
           </Link>{" "}
           to import league events.
         </p>

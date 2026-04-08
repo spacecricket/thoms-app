@@ -188,7 +188,7 @@ function MatchDetailsInline({ row }: { row: H2HRow }) {
             </span>
             {m.linkedLiveMatchId && (
               <Link
-                href={`/league/${m.eventId}/${m.matchId}/play-by-play`}
+                href={`/leagues/play-by-play/${m.matchId}`}
                 className="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-600 hover:bg-blue-100"
                 onClick={(e) => e.stopPropagation()}
               >

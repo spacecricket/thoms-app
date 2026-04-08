@@ -2,20 +2,21 @@ import { prisma } from "./prisma";
 import type { AnalysisData, H2HRow, H2HMatchDetail, MatchRecord, ScrapedEventDetail } from "./types";
 
 export async function getAnalysis(): Promise<AnalysisData> {
-  const events = await prisma.event.findMany({
-    orderBy: [{ eventDate: "asc" }, { scrapedAt: "asc" }],
-  });
+  const [events, matches, linkedLiveMatches] = await Promise.all([
+    prisma.event.findMany({
+      orderBy: [{ eventDate: "asc" }, { scrapedAt: "asc" }],
+    }),
+    prisma.match.findMany({
+      orderBy: { id: "asc" },
+      include: { opponent: true },
+    }),
+    // Build lookup: JustGo Match.id → LiveMatch.id (for public play-by-play linking)
+    prisma.liveMatch.findMany({
+      where: { linkedMatchId: { not: null } },
+      select: { id: true, linkedMatchId: true },
+    }),
+  ]);
 
-  const matches = await prisma.match.findMany({
-    orderBy: { id: "asc" },
-    include: { opponent: true },
-  });
-
-  // Build lookup: JustGo Match.id → LiveMatch.id (for public play-by-play linking)
-  const linkedLiveMatches = await prisma.liveMatch.findMany({
-    where: { linkedMatchId: { not: null } },
-    select: { id: true, linkedMatchId: true },
-  });
   const liveMatchByMatchId = new Map(
     linkedLiveMatches.map((l) => [l.linkedMatchId!, l.id]),
   );

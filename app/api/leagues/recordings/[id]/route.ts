@@ -59,6 +59,7 @@ export async function GET(
     match: {
       id: match.id,
       createdAt: match.createdAt,
+      matchDate: match.matchDate,
       opponentName: match.opponentName,
       opponentUsattId: match.opponentUsattId,
       thomSide: match.thomSide,

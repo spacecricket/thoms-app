@@ -10,10 +10,10 @@ export default function Home() {
         tjs
       </p>
       <Link
-        href="/league"
+        href="/leagues"
         className="mt-6 text-sm text-gray-400 transition-colors hover:text-gray-900"
       >
-        league →
+        leagues →
       </Link>
     </div>
   );

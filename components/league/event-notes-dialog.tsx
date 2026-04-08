@@ -53,7 +53,7 @@ function CandidatePicker({
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/league/admin/live?date=${eventDate}`, {
+    fetch(`/api/leagues/recordings?date=${eventDate}`, {
       headers: { Authorization: `Bearer ${password}` },
     })
       .then((r) => r.json())
@@ -70,7 +70,7 @@ function CandidatePicker({
   async function link(liveId: string) {
     setWorking(true);
     try {
-      const res = await fetch(`/api/league/admin/live/${liveId}`, {
+      const res = await fetch(`/api/leagues/recordings/${liveId}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${password}`, "Content-Type": "application/json" },
         body: JSON.stringify({ linkedMatchId: match.id }),
@@ -142,7 +142,7 @@ function MatchRow({
     if (!liveId) return;
     setUnlinking(true);
     try {
-      const res = await fetch(`/api/league/admin/live/${liveId}`, {
+      const res = await fetch(`/api/leagues/recordings/${liveId}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${password}`, "Content-Type": "application/json" },
         body: JSON.stringify({ linkedMatchId: null }),
@@ -175,7 +175,7 @@ function MatchRow({
           {/* Play-by-play link */}
           {liveId && (
             <Link
-              href={`/league/${eventId}/${m.id}/play-by-play`}
+              href={`/leagues/play-by-play/${m.id}`}
               className="flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
               onClick={onClose}
               title="View play-by-play"
@@ -250,7 +250,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/league/notes/${event.id}`, {
+        const res = await fetch(`/api/leagues/events/${event.id}/notes`, {
           headers: { Authorization: `Bearer ${pw}` },
         });
         if (res.status === 401) {
@@ -308,7 +308,7 @@ export function EventDetailDialog({ event, matches, onClose, onNotesChanged }: P
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/league/notes/${event.id}`, {
+      const res = await fetch(`/api/leagues/events/${event.id}/notes`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${pw}`,

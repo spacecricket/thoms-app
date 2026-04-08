@@ -57,7 +57,7 @@ export default function JoinLeaguePage() {
     sessionStorage.setItem("admin_pw", password);
 
     try {
-      const res = await fetch("/api/league/join", {
+      const res = await fetch("/api/leagues/auto-join", {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({ leagueName, leagueDate }),

@@ -36,7 +36,7 @@ export default function AdminPage() {
       const params = new URLSearchParams();
       if (nameFilter) params.set("name", nameFilter);
       const res = await fetch(
-        `/api/league/admin/search?${params.toString()}`,
+        `/api/leagues/events?${params.toString()}`,
         { headers: headers() },
       );
       if (res.status === 401) {
@@ -62,7 +62,7 @@ export default function AdminPage() {
     try {
       const endpoint = reimport ? "reimport" : "import";
       const res = await fetch(
-        `/api/league/admin/events/${eventId}/${endpoint}`,
+        `/api/leagues/events/${eventId}/${endpoint}`,
         { method: "POST", headers: headers() },
       );
       if (!res.ok) throw new Error(await res.text());
@@ -112,7 +112,7 @@ export default function AdminPage() {
           League Admin — Import Events
         </h1>
         <Link
-          href="/league/join"
+          href="/leagues/auto-join"
           className="text-sm text-gray-500 hover:text-gray-900"
         >
           Join League →

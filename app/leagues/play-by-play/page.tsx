@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { PlayByPlayView } from "@/components/league/play-by-play-view";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,7 @@ function RecordingPhase({
       const thomWins = (shotBy === "thom") === (outcome === "winner");
       const winner: Player = thomWins ? "thom" : "opponent";
 
-      const res = await fetch(`/api/league/admin/live/${match.id}/point`, {
+      const res = await fetch(`/api/leagues/recordings/${match.id}/points`, {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({
@@ -275,7 +276,7 @@ function RecordingPhase({
     if (busy) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/league/admin/live/${match.id}/point`, {
+      const res = await fetch(`/api/leagues/recordings/${match.id}/points`, {
         method: "DELETE",
         headers: headers(),
       });
@@ -296,7 +297,7 @@ function RecordingPhase({
     thomSetsWon: number;
     oppSetsWon: number;
   }>) {
-    const res = await fetch(`/api/league/admin/live/${match.id}/state`, {
+    const res = await fetch(`/api/leagues/recordings/${match.id}/state`, {
       method: "PATCH",
       headers: headers(),
       body: JSON.stringify(patch),
@@ -333,7 +334,7 @@ function RecordingPhase({
     if (busy) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/league/admin/live/${match.id}/point`, {
+      const res = await fetch(`/api/leagues/recordings/${match.id}/points`, {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({ winner }),
@@ -516,7 +517,7 @@ function SetupPhase({
   );
 
   useEffect(() => {
-    fetch("/api/league/admin/opponents", { headers: headers() })
+    fetch("/api/leagues/opponents", { headers: headers() })
       .then((r) => r.json())
       .then((d) => setOpponents(d.opponents ?? []))
       .catch(() => {});
@@ -532,7 +533,7 @@ function SetupPhase({
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch("/api/league/admin/live", {
+      const res = await fetch("/api/leagues/recordings", {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({
@@ -556,7 +557,7 @@ function SetupPhase({
         status: data.match.status,
       };
       // Fetch initial state
-      const stateRes = await fetch(`/api/league/admin/live/${data.match.id}`, {
+      const stateRes = await fetch(`/api/leagues/recordings/${data.match.id}`, {
         headers: headers(),
       });
       const stateData = await stateRes.json();
@@ -697,192 +698,12 @@ interface PastMatch {
   oppSetsWon: number;
 }
 
-interface LivePointRecord {
-  id: string;
-  setNumber: number;
-  pointInSet: number;
-  serverThom: boolean;
-  thomWon: boolean;
-  thomSetScore: number;
-  oppSetScore: number;
-  thomSetsWon: number;
-  oppSetsWon: number;
-  setComplete: boolean;
-  matchComplete: boolean;
-  shotType: string | null;
-  shotBy: string | null;
-  pointType: string | null;
-}
-
 function fmt(date: string) {
   const d = new Date(date);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-// ─── Match Analysis ───────────────────────────────────────────────────────────
-
-function ShotBreakdown({
-  byShot,
-  color,
-}: {
-  byShot: Record<string, { winners: number; errors: number }>;
-  color: "blue" | "red";
-}) {
-  const rows = SHOTS
-    .map(({ key, label }) => ({ key, label, ...(byShot[key] ?? { winners: 0, errors: 0 }) }))
-    .filter((r) => r.winners > 0 || r.errors > 0);
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-100">
-      <div className="grid grid-cols-3 border-b border-gray-100 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-        <span>Shot</span>
-        <span className="text-center">Winners</span>
-        <span className="text-center">Errors</span>
-      </div>
-      {rows.map(({ key, label, winners, errors }, i) => (
-        <div
-          key={key}
-          className={`grid grid-cols-3 items-center px-4 py-2 text-sm ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
-        >
-          <span className="font-medium capitalize text-gray-700">{label}</span>
-          <span className={`text-center font-bold ${color === "blue" ? "text-blue-700" : "text-red-600"}`}>
-            {winners}
-          </span>
-          <span className={`text-center font-bold ${color === "blue" ? "text-blue-300" : "text-red-300"}`}>
-            {errors}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MatchAnalysis({
-  points,
-  opponentName,
-}: {
-  points: LivePointRecord[];
-  opponentName: string;
-}) {
-  const shortOpp = opponentName.split(" ")[0];
-
-  // Only consider points with full shot detail
-  const annotated = points.filter((p) => p.shotType && p.pointType);
-  if (annotated.length === 0) return null;
-
-  const thomWinners = annotated.filter((p) => p.shotBy === "thom" && p.pointType === "winner").length;
-  const thomErrors  = annotated.filter((p) => p.shotBy === "thom" && p.pointType === "error").length;
-  const oppWinners  = annotated.filter((p) => p.shotBy === "opponent" && p.pointType === "winner").length;
-  const oppErrors   = annotated.filter((p) => p.shotBy === "opponent" && p.pointType === "error").length;
-
-  const thomByShot: Record<string, { winners: number; errors: number }> = {};
-  const oppByShot:  Record<string, { winners: number; errors: number }> = {};
-
-  for (const p of annotated) {
-    if (!p.shotType) continue;
-    const bucket = p.shotBy === "thom" ? thomByShot : oppByShot;
-    if (!bucket[p.shotType]) bucket[p.shotType] = { winners: 0, errors: 0 };
-    if (p.pointType === "winner") bucket[p.shotType].winners++;
-    else if (p.pointType === "error") bucket[p.shotType].errors++;
-  }
-
-  // Thom's error % per shot type, sorted worst first
-  const thomErrRates = SHOTS
-    .map(({ key, label }) => {
-      const s = thomByShot[key] ?? { winners: 0, errors: 0 };
-      const total = s.winners + s.errors;
-      return { key, label, winners: s.winners, errors: s.errors, total, errPct: total > 0 ? Math.round((s.errors / total) * 100) : null };
-    })
-    .filter((r) => r.total > 0)
-    .sort((a, b) => (b.errPct ?? 0) - (a.errPct ?? 0));
-
-  return (
-    <div className="mt-8 space-y-6 border-t border-gray-100 pt-8">
-      <h3 className="text-lg font-black text-gray-900">Match Analysis</h3>
-
-      {/* Per-player summary */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: "Thom", winners: thomWinners, errors: thomErrors, blue: true },
-          { label: shortOpp, winners: oppWinners, errors: oppErrors, blue: false },
-        ].map(({ label, winners, errors, blue }) => (
-          <div key={label} className={`rounded-xl p-4 ${blue ? "bg-blue-50" : "bg-red-50"}`}>
-            <div className={`mb-2 text-sm font-bold uppercase tracking-wide ${blue ? "text-blue-700" : "text-red-700"}`}>
-              {label}
-            </div>
-            <div className="flex gap-6">
-              <div>
-                <div className={`text-2xl font-black ${blue ? "text-blue-800" : "text-red-800"}`}>{winners}</div>
-                <div className="text-xs text-gray-500">winners</div>
-              </div>
-              <div>
-                <div className={`text-2xl font-black ${blue ? "text-blue-400" : "text-red-400"}`}>{errors}</div>
-                <div className="text-xs text-gray-500">errors</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Thom — by shot type */}
-      {Object.keys(thomByShot).length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-            Thom — by shot type
-          </h4>
-          <ShotBreakdown byShot={thomByShot} color="blue" />
-        </div>
-      )}
-
-      {/* Opponent — by shot type */}
-      {Object.keys(oppByShot).length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-            {shortOpp} — by shot type
-          </h4>
-          <ShotBreakdown byShot={oppByShot} color="red" />
-        </div>
-      )}
-
-      {/* Error % per shot type — practice guide */}
-      {thomErrRates.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-            Thom — error % by shot (what to practice)
-          </h4>
-          <div className="overflow-hidden rounded-xl border border-gray-100">
-            {thomErrRates.map(({ key, label, winners, errors, errPct }, i) => (
-              <div
-                key={key}
-                className={`flex items-center gap-3 px-4 py-2.5 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
-              >
-                <span className="w-14 font-medium capitalize text-gray-700">{label}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className={`h-full rounded-full transition-all ${(errPct ?? 0) >= 50 ? "bg-red-400" : "bg-amber-300"}`}
-                      style={{ width: `${errPct ?? 0}%` }}
-                    />
-                  </div>
-                </div>
-                <span
-                  className={`w-10 text-right text-sm font-black tabular-nums ${(errPct ?? 0) >= 50 ? "text-red-600" : "text-gray-700"}`}
-                >
-                  {errPct}%
-                </span>
-                <span className="w-20 text-right text-xs tabular-nums text-gray-400">
-                  {winners}W / {errors}E
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Past match list + play-by-play viewer ────────────────────────────────────
+// ─── Past match play-by-play viewer ──────────────────────────────────────────
 
 function MatchViewer({
   matchId,
@@ -894,13 +715,13 @@ function MatchViewer({
   onBack: () => void;
 }) {
   const [data, setData] = useState<{
-    match: { opponentName: string; matchDate: string; firstServer: string };
-    state: MatchState;
-    points: LivePointRecord[];
+    match: { opponentName: string; matchDate: string; firstServer: string; status: string; createdAt: string };
+    state: { thomSetsWon: number; oppSetsWon: number; matchComplete: boolean };
+    points: unknown[];
   } | null>(null);
 
   useEffect(() => {
-    fetch(`/api/league/admin/live/${matchId}`, {
+    fetch(`/api/leagues/recordings/${matchId}`, {
       headers: { Authorization: `Bearer ${password}` },
     })
       .then((r) => r.json())
@@ -916,28 +737,6 @@ function MatchViewer({
     );
   }
 
-  const { match, points } = data;
-
-  // Group points by set
-  const sets: Record<number, LivePointRecord[]> = {};
-  for (const p of points) {
-    if (!sets[p.setNumber]) sets[p.setNumber] = [];
-    sets[p.setNumber].push(p);
-  }
-  const setNumbers = Object.keys(sets)
-    .map(Number)
-    .sort((a, b) => a - b);
-
-  const shotLabel = (p: LivePointRecord) => {
-    if (!p.shotType && !p.pointType) return null;
-    const by = p.shotBy === "thom" ? "Thom" : match.opponentName.split(" ")[0];
-    const shot = p.shotType ? p.shotType.replace("_", " ") : "";
-    const type = p.pointType === "winner" ? "winner" : p.pointType === "error" ? "error" : "";
-    if (shot && type) return `${shot} ${type} by ${by}`;
-    if (shot) return `${shot} by ${by}`;
-    return null;
-  };
-
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <button
@@ -946,107 +745,17 @@ function MatchViewer({
       >
         ← Back
       </button>
-
-      <div className="mb-6">
-        <h2 className="text-2xl font-black text-gray-900">
-          Thom vs {match.opponentName}
-        </h2>
-        <p className="text-sm text-gray-500">{fmt(match.matchDate)}</p>
-        <p className="mt-1 text-lg font-bold text-gray-700">
-          {data.state.thomSetsWon} – {data.state.oppSetsWon} sets
-        </p>
-        {data.state.matchComplete && (
-          <div className={`mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-base font-black ${
-            data.state.thomSetsWon > data.state.oppSetsWon
-              ? "bg-blue-600 text-white"
-              : "bg-red-500 text-white"
-          }`}>
-            {data.state.thomSetsWon > data.state.oppSetsWon
-              ? "🏆 Thom won"
-              : `${match.opponentName.split(" ")[0]} won`}
-          </div>
-        )}
-      </div>
-
-      {setNumbers.map((setNum) => {
-        const setPoints = sets[setNum];
-        const last = setPoints[setPoints.length - 1];
-        const thomSetScore = last?.thomSetScore ?? 0;
-        const oppSetScore = last?.oppSetScore ?? 0;
-        return (
-          <div key={setNum} className="mb-6">
-            <div className="mb-2 flex items-center gap-3">
-              <span className="text-sm font-bold uppercase tracking-wide text-gray-500">
-                Set {setNum}
-              </span>
-              <span className="text-sm font-black text-gray-900">
-                {thomSetScore} – {oppSetScore}
-              </span>
-              {last?.setComplete && (
-                <span className={`rounded px-2 py-0.5 text-xs font-semibold ${
-                  thomSetScore > oppSetScore
-                    ? "bg-blue-50 text-blue-700"
-                    : "bg-red-50 text-red-600"
-                }`}>
-                  {thomSetScore > oppSetScore ? "Thom" : match.opponentName.split(" ")[0]}
-                </span>
-              )}
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-gray-100">
-              {setPoints.map((p, i) => {
-                const label = shotLabel(p);
-                return (
-                  <div
-                    key={p.id}
-                    className={`flex items-center gap-3 px-3 py-2 text-sm ${
-                      i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    }`}
-                  >
-                    {/* Point # */}
-                    <span className="w-5 shrink-0 text-right text-xs text-gray-400">
-                      {p.pointInSet}
-                    </span>
-
-                    {/* Server dot */}
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${
-                        p.serverThom ? "bg-blue-500" : "bg-red-400"
-                      }`}
-                      title={p.serverThom ? "Thom serves" : `${match.opponentName.split(" ")[0]} serves`}
-                    />
-
-                    {/* Winner */}
-                    <span
-                      className={`w-20 shrink-0 font-semibold ${
-                        p.thomWon ? "text-blue-700" : "text-red-600"
-                      }`}
-                    >
-                      {p.thomWon ? "Thom" : match.opponentName.split(" ")[0]}
-                    </span>
-
-                    {/* Shot detail */}
-                    <span className="flex-1 capitalize text-gray-500">
-                      {label ?? <span className="italic text-gray-300">—</span>}
-                    </span>
-
-                    {/* Score after */}
-                    <span className="shrink-0 tabular-nums text-gray-400">
-                      {p.thomSetScore}–{p.oppSetScore}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-
-      {points.length === 0 && (
-        <p className="text-center text-gray-400">No points recorded yet.</p>
-      )}
-
-      {points.length > 0 && <MatchAnalysis points={points} opponentName={match.opponentName} />}
+      <PlayByPlayView
+        match={{
+          opponentName: data.match.opponentName,
+          matchDate: data.match.matchDate,
+          firstServer: data.match.firstServer,
+          status: data.match.status,
+        }}
+        state={data.state}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        points={data.points as any}
+      />
     </div>
   );
 }
@@ -1062,7 +771,7 @@ function PastMatchesList({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/league/admin/live", {
+    fetch("/api/leagues/recordings", {
       headers: { Authorization: `Bearer ${password}` },
     })
       .then((r) => r.json())
@@ -1115,7 +824,7 @@ function AuthGate({ onAuth }: { onAuth: (pw: string) => void }) {
   }, [onAuth]);
 
   async function tryAuth() {
-    const res = await fetch("/api/league/admin/opponents", {
+    const res = await fetch("/api/leagues/opponents", {
       headers: { Authorization: `Bearer ${pw}` },
     });
     if (res.ok) { sessionStorage.setItem("admin_pw", pw); onAuth(pw); }

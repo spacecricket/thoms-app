@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ matchId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { matchId } = await params;
+  const { id: matchId } = await params;
   const matchIdInt = parseInt(matchId, 10);
   if (isNaN(matchIdInt)) {
     return NextResponse.json({ error: "Invalid matchId" }, { status: 400 });
