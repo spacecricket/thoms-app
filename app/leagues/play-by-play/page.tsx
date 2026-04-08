@@ -46,7 +46,7 @@ const SHOTS = [
   { key: "counter", label: "Counter" },
   { key: "drop",    label: "Drop"    },
   { key: "smash",   label: "Smash"   },
-  { key: "unknown", label: "Unknown"  },
+  { key: "unknown", label: "?"       },
 ] as const;
 type ShotKey = (typeof SHOTS)[number]["key"];
 
@@ -67,9 +67,7 @@ function ScoreStepper({
 }) {
   const numClass = size === "lg" ? "text-5xl leading-none" : "text-2xl leading-none";
   const numColor = color === "blue" ? "text-blue-700" : "text-red-600";
-  const btnClass =
-    "flex items-center justify-center rounded-lg font-black leading-none active:scale-90 " +
-    (size === "lg" ? "h-9 w-14 text-xl" : "h-6 w-10 text-xs");
+  const btnClass = "flex items-center justify-center rounded-lg font-black leading-none active:scale-90 h-6 w-10 text-xs";
   const btnColor = "bg-gray-100 text-gray-400 hover:bg-gray-200 active:bg-gray-300";
 
   return (
@@ -141,7 +139,7 @@ function ShotSection({
         {isWinner ? "✓ Winner" : "✗ Error"}
       </div>
       {/* 3×4 shot grid (12 buttons) */}
-      <div className="grid flex-1 grid-cols-3 grid-rows-4">
+      <div className="grid flex-1 grid-cols-4 grid-rows-3">
         {SHOTS.map(({ key, label }) => (
           <button
             key={key}
@@ -160,6 +158,7 @@ function ShotSection({
 // ─── One player's column (winner+error stacked) ───────────────────────────────
 
 function PlayerColumn({
+  isServing,
   shotBy,
   opponentName,
   backhand,
@@ -167,6 +166,7 @@ function PlayerColumn({
   onTap,
   disabled,
 }: {
+  isServing: boolean,
   shotBy: Player;
   opponentName: string;
   backhand: boolean | null;
@@ -180,13 +180,14 @@ function PlayerColumn({
     ? "bg-white text-blue-800 shadow-lg scale-105"
     : "bg-white text-red-700 shadow-lg scale-105";
   const inactiveBtn = "bg-white/15 text-white/50 hover:bg-white/25 hover:text-white/80";
+  const borderColor = isServing ? "border-green-400" : "border-white";
 
   function toggleHand(val: boolean) {
     onBackhandChange(backhand === val ? null : val);
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden rounded-2xl">
+    <div className={`flex flex-1 flex-col overflow-hidden rounded-2xl border-8 ${borderColor}`}>
       {/* Column header */}
       <div className={`${headerBg} px-2 pt-2 pb-2`}>
         <div className="mb-1 text-center text-sm font-black uppercase tracking-widest text-white">
@@ -401,22 +402,8 @@ function RecordingPhase({
     );
   }
 
-  const serveIsThom = state.nextServer === "thom";
-
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white select-none p-3 gap-1">
-
-      {/* ── Set number + serve indicator (thin row) ──────────────────────── */}
-      <div className="flex shrink-0 items-center justify-center gap-3 border-b border-gray-100 bg-white py-1">
-        <span className={`text-sm font-semibold ${flash === "set" ? "text-yellow-600" : "text-gray-500"}`}>
-          {flash === "set" ? "Set complete! →" : `Set ${state.setNumber}`}
-        </span>
-        <span className="text-gray-300">·</span>
-        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-          <span className={`h-2.5 w-2.5 rounded-full ${serveIsThom ? "bg-blue-600" : "bg-red-500"}`} />
-          <span>{serveIsThom ? "Thom" : shortName} serves</span>
-        </div>
-      </div>
 
       {/* ── Score row: [⇄] [sets] [point score] [sets] [↩] ─────────────── */}
       <div className={`flex shrink-0 items-center px-3 py-3 transition-colors ${flash === "set" ? "bg-yellow-50" : "bg-white"}`}>
@@ -458,8 +445,6 @@ function RecordingPhase({
           size="lg"
         />
 
-        <span className="text-5xl font-thin text-gray-200">—</span>
-
         <ScoreStepper
           value={rightPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
           onUp={() => addBlankPoint(rightPlayer)}
@@ -500,6 +485,7 @@ function RecordingPhase({
       {/* ── Main shot grid ───────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 gap-1 overflow-hidden rounded-xl">
         <PlayerColumn
+          isServing={leftPlayer === state.nextServer}
           shotBy={leftPlayer}
           opponentName={shortName}
           backhand={leftPlayer === "thom" ? thomBackhand : oppBackhand}
@@ -508,6 +494,7 @@ function RecordingPhase({
           disabled={busy}
         />
         <PlayerColumn
+          isServing={rightPlayer === state.nextServer}
           shotBy={rightPlayer}
           opponentName={shortName}
           backhand={rightPlayer === "thom" ? thomBackhand : oppBackhand}
