@@ -119,6 +119,8 @@ model LivePoint {
   shotBy        String?   @map("shot_by")
   /// "winner" | "unforced_error" | "forced_error"
   pointType     String?   @map("point_type")
+  /// true = backhand, false = forehand, null = unknown/not observed
+  backhand      Boolean?  @map("backhand")
 
   @@index([liveMatchId])
   @@map("live_points")
