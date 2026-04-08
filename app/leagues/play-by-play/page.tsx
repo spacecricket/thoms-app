@@ -35,15 +35,18 @@ interface KnownOpponent {
 }
 
 const SHOTS = [
-  { key: "serve", label: "Serve" },
-  { key: "push",  label: "Push"  },
-  { key: "chop",  label: "Chop"  },
-  { key: "lob",   label: "Lob"   },
-  { key: "block", label: "Block" },
-  { key: "drive", label: "Drive" },
-  { key: "flick", label: "Flick" },
-  { key: "loop",  label: "Loop"  },
-  { key: "smash", label: "Smash" },
+  { key: "serve",   label: "Serve"   },
+  { key: "push",    label: "Push"    },
+  { key: "chop",    label: "Chop"    },
+  { key: "lob",     label: "Lob"     },
+  { key: "block",   label: "Block"   },
+  { key: "drive",   label: "Drive"   },
+  { key: "flick",   label: "Flick"   },
+  { key: "loop",    label: "Loop"    },
+  { key: "counter", label: "Counter" },
+  { key: "drop",    label: "Drop"    },
+  { key: "smash",   label: "Smash"   },
+  { key: "unknown", label: "Unknown"  },
 ] as const;
 type ShotKey = (typeof SHOTS)[number]["key"];
 
@@ -62,15 +65,12 @@ function ScoreStepper({
   color?: "blue" | "red";
   size?: "md" | "lg";
 }) {
-  const numClass = size === "lg" ? "text-8xl leading-none" : "text-4xl leading-none";
+  const numClass = size === "lg" ? "text-5xl leading-none" : "text-2xl leading-none";
   const numColor = color === "blue" ? "text-blue-700" : "text-red-600";
   const btnClass =
     "flex items-center justify-center rounded-lg font-black leading-none active:scale-90 " +
     (size === "lg" ? "h-9 w-14 text-xl" : "h-6 w-10 text-xs");
-  const btnColor =
-    color === "blue"
-      ? "bg-blue-100 text-blue-500 hover:bg-blue-200 active:bg-blue-300"
-      : "bg-red-100 text-red-400 hover:bg-red-200 active:bg-red-300";
+  const btnColor = "bg-gray-100 text-gray-400 hover:bg-gray-200 active:bg-gray-300";
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -92,13 +92,11 @@ function ScoreStepper({
 function ShotSection({
   shotBy,
   outcome,
-  opponentName,
   onTap,
   disabled,
 }: {
   shotBy: Player;
   outcome: "winner" | "error";
-  opponentName: string;
   onTap: (shotBy: Player, shotType: ShotKey, outcome: "winner" | "error") => void;
   disabled: boolean;
 }) {
@@ -142,8 +140,8 @@ function ShotSection({
       <div className={`py-1 text-center text-xs font-bold uppercase tracking-wider ${labelClass} ${bgClass}`}>
         {isWinner ? "✓ Winner" : "✗ Error"}
       </div>
-      {/* 3×3 shot grid (9 buttons) */}
-      <div className="grid flex-1 grid-cols-3 grid-rows-3">
+      {/* 3×4 shot grid (12 buttons) */}
+      <div className="grid flex-1 grid-cols-3 grid-rows-4">
         {SHOTS.map(({ key, label }) => (
           <button
             key={key}
@@ -164,28 +162,56 @@ function ShotSection({
 function PlayerColumn({
   shotBy,
   opponentName,
+  backhand,
+  onBackhandChange,
   onTap,
   disabled,
 }: {
   shotBy: Player;
   opponentName: string;
+  backhand: boolean | null;
+  onBackhandChange: (value: boolean | null) => void;
   onTap: (shotBy: Player, shotType: ShotKey, outcome: "winner" | "error") => void;
   disabled: boolean;
 }) {
   const isThom = shotBy === "thom";
   const headerBg = isThom ? "bg-blue-700" : "bg-red-700";
+  const activeBtn = isThom
+    ? "bg-white text-blue-800 shadow-lg scale-105"
+    : "bg-white text-red-700 shadow-lg scale-105";
+  const inactiveBtn = "bg-white/15 text-white/50 hover:bg-white/25 hover:text-white/80";
+
+  function toggleHand(val: boolean) {
+    onBackhandChange(backhand === val ? null : val);
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden rounded-2xl">
       {/* Column header */}
-      <div className={`py-2 text-center text-sm font-black uppercase tracking-widest text-white ${headerBg}`}>
-        {isThom ? "Thom" : opponentName}
-        <span className="ml-1 text-xs font-normal opacity-70">hit last</span>
+      <div className={`${headerBg} px-2 pt-2 pb-2`}>
+        <div className="mb-1 text-center text-sm font-black uppercase tracking-widest text-white">
+          {isThom ? "Thom" : opponentName}
+          <span className="ml-1 text-xs font-normal opacity-70">ending shot</span>
+        </div>
+        <div className="flex gap-2 px-1 pb-1">
+          <button
+            onPointerDown={() => toggleHand(true)}
+            className={`flex-1 rounded-lg py-2 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeBtn : inactiveBtn}`}
+          >
+            BH
+          </button>
+          <button
+            onPointerDown={() => toggleHand(false)}
+            className={`flex-1 rounded-lg py-2 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeBtn : inactiveBtn}`}
+          >
+            FH
+          </button>
+        </div>
       </div>
       {/* Winner section */}
       <ShotSection
         shotBy={shotBy}
         outcome="winner"
-        opponentName={opponentName}
         onTap={onTap}
         disabled={disabled}
       />
@@ -193,7 +219,6 @@ function PlayerColumn({
       <ShotSection
         shotBy={shotBy}
         outcome="error"
-        opponentName={opponentName}
         onTap={onTap}
         disabled={disabled}
       />
@@ -216,6 +241,8 @@ function RecordingPhase({
   const [thomSide, setThomSide] = useState<Side>(match.thomSide);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"set" | "match" | null>(null);
+  const [thomBackhand, setThomBackhand] = useState<boolean | null>(null);
+  const [oppBackhand, setOppBackhand] = useState<boolean | null>(null);
 
   const headers = useCallback(
     () => ({
@@ -245,6 +272,8 @@ function RecordingPhase({
       const thomWins = (shotBy === "thom") === (outcome === "winner");
       const winner: Player = thomWins ? "thom" : "opponent";
 
+      const backhand = shotBy === "thom" ? thomBackhand : oppBackhand;
+
       const res = await fetch(`/api/leagues/recordings/${match.id}/points`, {
         method: "POST",
         headers: headers(),
@@ -253,11 +282,14 @@ function RecordingPhase({
           shotBy,
           shotType,
           pointType: outcome, // "winner" | "error"
+          backhand,
         }),
       });
       if (!res.ok) return;
       const data = await res.json();
       setState(data.state);
+      setThomBackhand(null);
+      setOppBackhand(null);
 
       if (data.state.matchComplete) {
         setFlash("match");
@@ -400,7 +432,7 @@ function RecordingPhase({
         </div>
 
         {/* Centre group — scores */}
-        <div className="flex flex-1 items-center justify-center gap-4">
+        <div className="flex flex-1 items-center justify-center gap-6">
 
         {/* Left: sets won */}
         <div className="flex flex-col items-center gap-0.5">
@@ -470,12 +502,16 @@ function RecordingPhase({
         <PlayerColumn
           shotBy={leftPlayer}
           opponentName={shortName}
+          backhand={leftPlayer === "thom" ? thomBackhand : oppBackhand}
+          onBackhandChange={leftPlayer === "thom" ? setThomBackhand : setOppBackhand}
           onTap={handleShot}
           disabled={busy}
         />
         <PlayerColumn
           shotBy={rightPlayer}
           opponentName={shortName}
+          backhand={rightPlayer === "thom" ? thomBackhand : oppBackhand}
+          onBackhandChange={rightPlayer === "thom" ? setThomBackhand : setOppBackhand}
           onTap={handleShot}
           disabled={busy}
         />

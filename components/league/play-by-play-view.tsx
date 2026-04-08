@@ -8,13 +8,13 @@ const SHOTS = [
   { key: "chop",    label: "Chop"    },
   { key: "lob",     label: "Lob"     },
   { key: "block",   label: "Block"   },
-  { key: "counter", label: "Counter" },
   { key: "drive",   label: "Drive"   },
   { key: "flick",   label: "Flick"   },
-  { key: "banana",  label: "Banana"  },
   { key: "loop",    label: "Loop"    },
+  { key: "counter", label: "Counter" },
   { key: "drop",    label: "Drop"    },
   { key: "smash",   label: "Smash"   },
+  { key: "unknown", label: "Unknown" },
 ] as const;
 
 interface LivePoint {
