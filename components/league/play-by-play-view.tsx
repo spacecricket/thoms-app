@@ -3,15 +3,18 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const SHOTS = [
-  { key: "serve", label: "Serve" },
-  { key: "push",  label: "Push"  },
-  { key: "chop",  label: "Chop"  },
-  { key: "lob",   label: "Lob"   },
-  { key: "block", label: "Block" },
-  { key: "drive", label: "Drive" },
-  { key: "flick", label: "Flick" },
-  { key: "loop",  label: "Loop"  },
-  { key: "smash", label: "Smash" },
+  { key: "serve",   label: "Serve"   },
+  { key: "push",    label: "Push"    },
+  { key: "chop",    label: "Chop"    },
+  { key: "lob",     label: "Lob"     },
+  { key: "block",   label: "Block"   },
+  { key: "counter", label: "Counter" },
+  { key: "drive",   label: "Drive"   },
+  { key: "flick",   label: "Flick"   },
+  { key: "banana",  label: "Banana"  },
+  { key: "loop",    label: "Loop"    },
+  { key: "drop",    label: "Drop"    },
+  { key: "smash",   label: "Smash"   },
 ] as const;
 
 interface LivePoint {
@@ -29,6 +32,7 @@ interface LivePoint {
   shotType: string | null;
   shotBy: string | null;
   pointType: string | null;
+  backhand: boolean | null;
 }
 
 interface MatchSummary {
@@ -54,10 +58,12 @@ function fmt(date: string | Date) {
 function shotLabel(p: LivePoint, opponentName: string): string | null {
   if (!p.shotType && !p.pointType) return null;
   const by = p.shotBy === "thom" ? "Thom" : opponentName.split(" ")[0];
+  const hand = p.backhand === true ? "BH" : p.backhand === false ? "FH" : "";
   const shot = p.shotType ? p.shotType.replace("_", " ") : "";
+  const shotWithHand = hand && shot ? `${hand} ${shot}` : shot || hand;
   const type = p.pointType === "winner" ? "winner" : p.pointType === "error" ? "error" : "";
-  if (shot && type) return `${shot} ${type} by ${by}`;
-  if (shot) return `${shot} by ${by}`;
+  if (shotWithHand && type) return `${shotWithHand} ${type} by ${by}`;
+  if (shotWithHand) return `${shotWithHand} by ${by}`;
   return null;
 }
 
