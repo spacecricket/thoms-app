@@ -27,6 +27,7 @@ interface MatchInfo {
   tossWinner: Player;
   firstServer: Player;
   status: string;
+  matchDate?: string;
 }
 
 interface KnownOpponent {
@@ -49,51 +50,6 @@ const SHOTS = [
   { key: "unknown", label: "?"       },
 ] as const;
 type ShotKey = (typeof SHOTS)[number]["key"];
-
-// ─── Score stepper: number with + above and − below ──────────────────────────
-
-function ScoreStepper({
-  value,
-  onUp,
-  onDown,
-  color = "blue",
-  size = "md",
-  isServing = false,
-  servingSide = "left",
-  className = "",
-}: {
-  value: number;
-  onUp: () => void;
-  onDown: () => void;
-  color?: "blue" | "red";
-  size?: "md" | "lg";
-  isServing?: boolean;
-  servingSide?: "left" | "right";
-  className?: string;
-}) {
-  const numClass = size === "lg" ? "text-5xl leading-none" : "text-4xl font-light leading-none";
-  const numColor = size === "lg" ? (color === "blue" ? "text-blue-700" : "text-red-600") : "text-gray-600";
-  const btnClass = "flex items-center justify-center rounded-lg font-black leading-none active:scale-90 h-6 w-10 text-xs";
-  const btnColor = "bg-gray-100 text-gray-400 hover:bg-gray-200 active:bg-gray-300";
-
-  return (
-    <div className={`flex flex-col items-center gap-1 ${className}`}>
-      <button onPointerDown={onUp} className={`${btnClass} ${btnColor}`}>+</button>
-      <div className="relative flex items-center justify-center">
-        {isServing && (
-          <span
-            className={`absolute text-3xl leading-none ${servingSide === "left" ? "-left-9" : "-right-9"}`}
-            title="Serving"
-          >🏓</span>
-        )}
-        <span className={`min-w-[1.5ch] text-center font-black tabular-nums ${numClass} ${numColor}`}>
-          {value}
-        </span>
-      </div>
-      <button onPointerDown={onDown} className={`${btnClass} ${btnColor}`}>−</button>
-    </div>
-  );
-}
 
 // ─── Shot grid for one player+outcome combination ─────────────────────────────
 
@@ -140,11 +96,9 @@ function ShotSection({
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Section label */}
-      <div className={`py-1 text-center text-xs font-light uppercase tracking-wider`}>
+      <div className="py-1 text-center text-xs font-light uppercase tracking-wider">
         {isWinner ? "Winner / Error forcer" : "Unforced Error"}
       </div>
-      {/* 3×4 shot grid (12 buttons) */}
       <div className="grid flex-1 grid-cols-4 grid-rows-3 gap-1 p-1">
         {SHOTS.map(({ key, label }) => (
           <button
@@ -171,64 +125,68 @@ function PlayerColumn({
   onBackhandChange,
   onTap,
   disabled,
+  pointScore,
+  onPointUp,
+  onPointDown,
 }: {
-  isServing: boolean,
+  isServing: boolean;
   shotBy: Player;
   opponentName: string;
   backhand: boolean | null;
   onBackhandChange: (value: boolean | null) => void;
   onTap: (shotBy: Player, shotType: ShotKey, outcome: "winner" | "error") => void;
   disabled: boolean;
+  pointScore: number;
+  onPointUp: () => void;
+  onPointDown: () => void;
 }) {
   const isThom = shotBy === "thom";
-  const headerBg = isThom ? "bg-blue-700" : "bg-red-700";
   const activeBtn = isThom
-    ? "bg-white text-blue-800 shadow-lg scale-105"
-    : "bg-white text-red-700 shadow-lg scale-105";
-  const inactiveBtn = "bg-white/15 text-white/50 hover:bg-white/25 hover:text-white/80";
-  const borderColor = isServing ? "border-green-400" : "border-white";
+    ? "bg-blue-600 text-white shadow-md scale-105"
+    : "bg-red-600 text-white shadow-md scale-105";
+  const inactiveBtn = isThom
+    ? "bg-blue-50 text-blue-300 hover:bg-blue-100 hover:text-blue-400"
+    : "bg-red-50 text-red-300 hover:bg-red-100 hover:text-red-400";
+  const nameColor = isThom ? "text-blue-700" : "text-red-700";
+  const adjBtn = "flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs font-black text-gray-400 hover:bg-gray-200 active:scale-90";
 
   function toggleHand(val: boolean) {
     onBackhandChange(backhand === val ? null : val);
   }
 
   return (
-    <div className={`flex flex-1 flex-col overflow-hidden rounded-2xl border-8 ${borderColor}`}>
-      {/* Column header */}
-      <div className={`${headerBg} flex items-stretch gap-1.5 p-1.5`}>
+    <div className="flex flex-1 flex-col overflow-hidden rounded-2xl">
+      <div className="flex items-stretch gap-1.5 p-1.5">
         <button
           onPointerDown={() => toggleHand(true)}
-          className={`flex flex-1 items-center justify-center rounded-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeBtn : inactiveBtn}`}
+          className={`flex flex-1 items-center justify-center rounded-xl py-5 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeBtn : inactiveBtn}`}
         >
           BH
         </button>
-        <div className="flex flex-[2] flex-col items-center justify-center py-2 text-center">
-          <span className="text-sm font-black uppercase tracking-widest text-white">
-            {isThom ? "Thom" : opponentName}
-          </span>
-          <span className="text-[10px] font-normal uppercase tracking-wide text-white/60">ending shot</span>
+        <div className="flex flex-[2] flex-col items-center justify-center gap-0.5 text-center">
+          <div className="relative flex min-h-8 items-center justify-center">
+            <span className={`text-xs font-black uppercase leading-none tracking-widest ${nameColor}`}>
+              {isThom ? "Thom" : opponentName}
+            </span>
+            {isServing && (
+              <span className="absolute -right-9 text-3xl leading-none" title="Serving">🏓</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onPointerDown={onPointDown} className={adjBtn}>−</button>
+            <span className={`text-5xl font-black tabular-nums leading-none ${nameColor}`}>{pointScore}</span>
+            <button onPointerDown={onPointUp} className={adjBtn}>+</button>
+          </div>
         </div>
         <button
           onPointerDown={() => toggleHand(false)}
-          className={`flex flex-1 items-center justify-center rounded-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeBtn : inactiveBtn}`}
+          className={`flex flex-1 items-center justify-center rounded-xl py-5 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeBtn : inactiveBtn}`}
         >
           FH
         </button>
       </div>
-      {/* Winner section */}
-      <ShotSection
-        shotBy={shotBy}
-        outcome="winner"
-        onTap={onTap}
-        disabled={disabled}
-      />
-      {/* Error section */}
-      <ShotSection
-        shotBy={shotBy}
-        outcome="error"
-        onTap={onTap}
-        disabled={disabled}
-      />
+      <ShotSection shotBy={shotBy} outcome="winner" onTap={onTap} disabled={disabled} />
+      <ShotSection shotBy={shotBy} outcome="error" onTap={onTap} disabled={disabled} />
     </div>
   );
 }
@@ -408,78 +366,52 @@ function RecordingPhase({
     );
   }
 
+  // Parse date from ISO string without letting UTC→local conversion shift the day
+  const dateLabel = match.matchDate
+    ? (() => {
+        const [y, m, d] = match.matchDate!.split("T")[0].split("-");
+        return `${parseInt(m)}/${parseInt(d)}/${y.slice(2)}`;
+      })()
+    : null;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white select-none p-3 gap-1">
+    <div className="flex h-screen flex-col overflow-hidden bg-white select-none">
 
-      {/* ── Score row: [⇄] [sets] [point score] [sets] [↩] ─────────────── */}
-      <div className={`flex shrink-0 items-center px-3 py-3 transition-colors ${flash === "set" ? "bg-yellow-50" : "bg-white"}`}>
-
-        {/* Switch sides — equal-width left anchor */}
-        <div className="flex w-20 shrink-0 justify-start">
+      {/* ── Toolbar ──────────────────────────────────────────────────────── */}
+      <div className={`shrink-0 border-b transition-colors ${flash === "set" ? "border-yellow-200 bg-yellow-50" : "border-gray-100 bg-white"}`}>
+        <div className="flex items-center justify-between px-3 py-2">
           <button
             onPointerDown={() => setThomSide(thomSide === "left" ? "right" : "left")}
-            className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700"
+            className="shrink-0 rounded border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700"
           >
             ⇄ Sides
           </button>
-        </div>
 
-        {/* Centre group — scores */}
-        <div className="flex flex-1 items-center justify-center gap-6">
+          <div className="flex flex-col items-center">
+            {flash === "set" ? (
+              <p className="text-base font-black text-yellow-700">Set complete! →</p>
+            ) : (
+              <>
+                {/* Thom (− N +) vs Amaro (− N +) */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-black text-gray-800">Thom</span>
+                  <button onPointerDown={() => adjustSets("thom", -1)} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs font-black text-gray-400 hover:bg-gray-200 active:scale-90">−</button>
+                  <span className="min-w-[1ch] text-center text-2xl font-black text-gray-800">{state.thomSetsWon}</span>
+                  <button onPointerDown={() => adjustSets("thom", 1)} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs font-black text-gray-400 hover:bg-gray-200 active:scale-90">+</button>
+                  <span className="px-0.5 text-xs text-gray-400">vs</span>
+                  <button onPointerDown={() => adjustSets("opponent", -1)} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs font-black text-gray-400 hover:bg-gray-200 active:scale-90">−</button>
+                  <span className="min-w-[1ch] text-center text-2xl font-black text-gray-800">{state.oppSetsWon}</span>
+                  <button onPointerDown={() => adjustSets("opponent", 1)} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs font-black text-gray-400 hover:bg-gray-200 active:scale-90">+</button>
+                  <span className="text-sm font-black text-gray-800">{shortName}</span>
+                </div>
+              </>
+            )}
+          </div>
 
-        {/* Left: sets won */}
-        <div className="flex flex-col items-center gap-0.5">
-          <ScoreStepper
-            value={leftPlayer === "thom" ? state.thomSetsWon : state.oppSetsWon}
-            onUp={() => adjustSets(leftPlayer, 1)}
-            onDown={() => adjustSets(leftPlayer, -1)}
-            color={leftPlayer === "thom" ? "blue" : "red"}
-            size="md"
-          />
-        </div>
-
-        {/* Point score */}
-        <ScoreStepper
-          value={leftPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
-          onUp={() => addBlankPoint(leftPlayer)}
-          onDown={undo}
-          color={leftPlayer === "thom" ? "blue" : "red"}
-          size="lg"
-          isServing={state.nextServer === leftPlayer}
-          servingSide="left"
-          className="ml-6"
-        />
-
-        <ScoreStepper
-          value={rightPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
-          onUp={() => addBlankPoint(rightPlayer)}
-          onDown={undo}
-          color={rightPlayer === "thom" ? "blue" : "red"}
-          size="lg"
-          isServing={state.nextServer === rightPlayer}
-          servingSide="right"
-          className="mr-6"
-        />
-
-        {/* Right: sets won */}
-        <div className="flex flex-col items-center gap-0.5">
-          <ScoreStepper
-            value={rightPlayer === "thom" ? state.thomSetsWon : state.oppSetsWon}
-            onUp={() => adjustSets(rightPlayer, 1)}
-            onDown={() => adjustSets(rightPlayer, -1)}
-            color={rightPlayer === "thom" ? "blue" : "red"}
-            size="md"
-          />
-        </div>
-
-        </div>{/* end centre group */}
-
-        {/* Undo — equal-width right anchor */}
-        <div className="flex w-20 shrink-0 justify-end">
           <button
             onPointerDown={undo}
             disabled={busy}
-            className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-40"
+            className="shrink-0 rounded border border-gray-200 bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600 disabled:opacity-40"
           >
             ↩ Undo
           </button>
@@ -487,7 +419,7 @@ function RecordingPhase({
       </div>
 
       {/* ── Main shot grid ───────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 gap-1 overflow-hidden rounded-xl">
+      <div className="flex min-h-0 flex-1 gap-2 overflow-hidden p-2">
         <PlayerColumn
           isServing={leftPlayer === state.nextServer}
           shotBy={leftPlayer}
@@ -496,6 +428,9 @@ function RecordingPhase({
           onBackhandChange={leftPlayer === "thom" ? setThomBackhand : setOppBackhand}
           onTap={handleShot}
           disabled={busy}
+          pointScore={leftPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
+          onPointUp={() => addBlankPoint(leftPlayer)}
+          onPointDown={undo}
         />
         <PlayerColumn
           isServing={rightPlayer === state.nextServer}
@@ -505,6 +440,9 @@ function RecordingPhase({
           onBackhandChange={rightPlayer === "thom" ? setThomBackhand : setOppBackhand}
           onTap={handleShot}
           disabled={busy}
+          pointScore={rightPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
+          onPointUp={() => addBlankPoint(rightPlayer)}
+          onPointDown={undo}
         />
       </div>
     </div>
