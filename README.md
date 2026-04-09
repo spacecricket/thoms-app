@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# thom's app
 
-## Getting Started
+A hobby project built to explore vibe coding — the practice of building software through natural conversation with AI, letting ideas flow directly into working code and watching your competence slowly drain away ;).
 
-First, run the development server:
+The public view is live at **[https://thom.so](https://thom.so)**.
+
+## What this app does
+
+This is a personal table tennis stats tracker built around one player: Thom. It pulls match results from USATT (the US governing body for table tennis) via JustGo, their competition management platform, and presents them in a dashboard with:
+
+- **Match history** — every competitive result, organised by event, with win/loss record and rating progression over time
+- **Head-to-head breakdowns** — drill into any opponent to see the full history of matches, set scores, and trends
+- **Live match recorder** — an iPad-optimised point-by-point recording interface for capturing matches in real time, including shot type (loop, push, drive, etc.), backhand vs forehand, whether the shot was a winner or an error, and who was serving
+- **Play-by-play viewer** — a public page to watch a recorded match unfold point by point, with shot-level analysis including winner/error counts and a breakdown by shot type per player
+- **Event linking** — recorded live matches can be linked to the corresponding JustGo result so the play-by-play is surfaced directly from the match history
+
+## A note on the data
+
+The match history view is intentionally hardcoded for Thom. USATT match data belongs to USATT and I don't have the rights to build a general-purpose product on top of it. This is a personal project, not a platform.
+
+You can browse the non-admin public view at **[https://thom.so](https://thom.so)**.
+
+## Tech stack
+
+- **Next.js 14** (App Router, server + client components)
+- **Prisma** with **PostgreSQL** (hosted on [Neon](https://neon.tech))
+- **Tailwind CSS**
+- Deployed on **[Fly.io](https://fly.io)**
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You'll need a `.env` file with a `DATABASE_URL` pointing at a Neon (or any Postgres) database, and an `ADMIN_PASSWORD` for the live recording interface.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm prisma migrate deploy   # apply migrations
+pnpm prisma generate         # generate the Prisma client
+```
 
-## Learn More
+## Deploying
 
-To learn more about Next.js, take a look at the following resources:
+The app is containerised and deployed to Fly.io:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+fly deploy
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configuration lives in `fly.toml`. The app runs in the `sjc` (San Jose) region on a shared 1 CPU / 2 GB machine.
