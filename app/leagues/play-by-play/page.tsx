@@ -58,24 +58,38 @@ function ScoreStepper({
   onDown,
   color = "blue",
   size = "md",
+  isServing = false,
+  servingSide = "left",
+  className = "",
 }: {
   value: number;
   onUp: () => void;
   onDown: () => void;
   color?: "blue" | "red";
   size?: "md" | "lg";
+  isServing?: boolean;
+  servingSide?: "left" | "right";
+  className?: string;
 }) {
-  const numClass = size === "lg" ? "text-5xl leading-none" : "text-2xl leading-none";
-  const numColor = color === "blue" ? "text-blue-700" : "text-red-600";
+  const numClass = size === "lg" ? "text-5xl leading-none" : "text-4xl font-light leading-none";
+  const numColor = size === "lg" ? (color === "blue" ? "text-blue-700" : "text-red-600") : "text-gray-600";
   const btnClass = "flex items-center justify-center rounded-lg font-black leading-none active:scale-90 h-6 w-10 text-xs";
   const btnColor = "bg-gray-100 text-gray-400 hover:bg-gray-200 active:bg-gray-300";
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className={`flex flex-col items-center gap-1 ${className}`}>
       <button onPointerDown={onUp} className={`${btnClass} ${btnColor}`}>+</button>
-      <span className={`min-w-[1.5ch] text-center font-black tabular-nums ${numClass} ${numColor}`}>
-        {value}
-      </span>
+      <div className="relative flex items-center justify-center">
+        {isServing && (
+          <span
+            className={`absolute text-3xl leading-none ${servingSide === "left" ? "-left-9" : "-right-9"}`}
+            title="Serving"
+          >🏓</span>
+        )}
+        <span className={`min-w-[1.5ch] text-center font-black tabular-nums ${numClass} ${numColor}`}>
+          {value}
+        </span>
+      </div>
       <button onPointerDown={onDown} className={`${btnClass} ${btnColor}`}>−</button>
     </div>
   );
@@ -124,30 +138,22 @@ function ShotSection({
       ? "text-white"
       : "text-red-900";
 
-  const labelClass = thomWins
-    ? isWinner
-      ? "text-blue-100"
-      : "text-blue-600"
-    : isWinner
-      ? "text-red-100"
-      : "text-red-500";
-
   return (
     <div className="flex flex-1 flex-col">
       {/* Section label */}
-      <div className={`py-1 text-center text-xs font-bold uppercase tracking-wider ${labelClass} ${bgClass}`}>
-        {isWinner ? "✓ Winner" : "✗ Error"}
+      <div className={`py-1 text-center text-xs font-light uppercase tracking-wider`}>
+        {isWinner ? "Winner / Error forcer" : "Unforced Error"}
       </div>
       {/* 3×4 shot grid (12 buttons) */}
-      <div className="grid flex-1 grid-cols-4 grid-rows-3">
+      <div className="grid flex-1 grid-cols-4 grid-rows-3 gap-1 p-1">
         {SHOTS.map(({ key, label }) => (
           <button
             key={key}
             onPointerDown={() => !disabled && onTap(shotBy, key, outcome)}
             disabled={disabled}
-            className={`flex flex-col items-center justify-center border border-white/20 transition-all active:scale-95 disabled:opacity-50 ${bgClass} ${textClass}`}
+            className={`flex flex-col items-center justify-center rounded-xl border-b-4 border-black/20 shadow-sm transition-all active:translate-y-px active:border-b-0 active:shadow-none disabled:opacity-50 ${bgClass} ${textClass}`}
           >
-            <span className="text-sm font-bold leading-none md:text-base">{label}</span>
+            <span className="text-sm font-bold leading-none">{label}</span>
           </button>
         ))}
       </div>
@@ -189,25 +195,25 @@ function PlayerColumn({
   return (
     <div className={`flex flex-1 flex-col overflow-hidden rounded-2xl border-8 ${borderColor}`}>
       {/* Column header */}
-      <div className={`${headerBg} px-2 pt-2 pb-2`}>
-        <div className="mb-1 text-center text-sm font-black uppercase tracking-widest text-white">
-          {isThom ? "Thom" : opponentName}
-          <span className="ml-1 text-xs font-normal opacity-70">ending shot</span>
+      <div className={`${headerBg} flex items-stretch gap-1.5 p-1.5`}>
+        <button
+          onPointerDown={() => toggleHand(true)}
+          className={`flex flex-1 items-center justify-center rounded-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeBtn : inactiveBtn}`}
+        >
+          BH
+        </button>
+        <div className="flex flex-[2] flex-col items-center justify-center py-2 text-center">
+          <span className="text-sm font-black uppercase tracking-widest text-white">
+            {isThom ? "Thom" : opponentName}
+          </span>
+          <span className="text-[10px] font-normal uppercase tracking-wide text-white/60">ending shot</span>
         </div>
-        <div className="flex gap-2 px-1 pb-1">
-          <button
-            onPointerDown={() => toggleHand(true)}
-            className={`flex-1 rounded-lg py-2 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeBtn : inactiveBtn}`}
-          >
-            BH
-          </button>
-          <button
-            onPointerDown={() => toggleHand(false)}
-            className={`flex-1 rounded-lg py-2 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeBtn : inactiveBtn}`}
-          >
-            FH
-          </button>
-        </div>
+        <button
+          onPointerDown={() => toggleHand(false)}
+          className={`flex flex-1 items-center justify-center rounded-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeBtn : inactiveBtn}`}
+        >
+          FH
+        </button>
       </div>
       {/* Winner section */}
       <ShotSection
@@ -423,9 +429,6 @@ function RecordingPhase({
 
         {/* Left: sets won */}
         <div className="flex flex-col items-center gap-0.5">
-          <span className={`text-xs font-bold uppercase tracking-wide ${leftPlayer === "thom" ? "text-blue-700" : "text-red-600"}`}>
-            {leftPlayer === "thom" ? "Thom" : shortName}
-          </span>
           <ScoreStepper
             value={leftPlayer === "thom" ? state.thomSetsWon : state.oppSetsWon}
             onUp={() => adjustSets(leftPlayer, 1)}
@@ -433,7 +436,6 @@ function RecordingPhase({
             color={leftPlayer === "thom" ? "blue" : "red"}
             size="md"
           />
-          <span className={`text-[10px] ${leftPlayer === "thom" ? "text-blue-400" : "text-red-400"}`}>sets</span>
         </div>
 
         {/* Point score */}
@@ -443,6 +445,9 @@ function RecordingPhase({
           onDown={undo}
           color={leftPlayer === "thom" ? "blue" : "red"}
           size="lg"
+          isServing={state.nextServer === leftPlayer}
+          servingSide="left"
+          className="ml-6"
         />
 
         <ScoreStepper
@@ -451,13 +456,13 @@ function RecordingPhase({
           onDown={undo}
           color={rightPlayer === "thom" ? "blue" : "red"}
           size="lg"
+          isServing={state.nextServer === rightPlayer}
+          servingSide="right"
+          className="mr-6"
         />
 
         {/* Right: sets won */}
         <div className="flex flex-col items-center gap-0.5">
-          <span className={`text-xs font-bold uppercase tracking-wide ${rightPlayer === "thom" ? "text-blue-700" : "text-red-600"}`}>
-            {rightPlayer === "thom" ? "Thom" : shortName}
-          </span>
           <ScoreStepper
             value={rightPlayer === "thom" ? state.thomSetsWon : state.oppSetsWon}
             onUp={() => adjustSets(rightPlayer, 1)}
@@ -465,7 +470,6 @@ function RecordingPhase({
             color={rightPlayer === "thom" ? "blue" : "red"}
             size="md"
           />
-          <span className={`text-[10px] ${rightPlayer === "thom" ? "text-blue-400" : "text-red-400"}`}>sets</span>
         </div>
 
         </div>{/* end centre group */}
