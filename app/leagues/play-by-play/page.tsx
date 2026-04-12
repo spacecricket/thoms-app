@@ -646,8 +646,8 @@ interface PastMatch {
 }
 
 function fmt(date: string) {
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const [y, m, d] = date.split("T")[0].split("-");
+  return new Date(+y, +m - 1, +d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // ─── Past match play-by-play viewer ──────────────────────────────────────────
@@ -716,6 +716,8 @@ function PastMatchesList({
 }) {
   const [matches, setMatches] = useState<PastMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch("/api/leagues/recordings", {
@@ -726,6 +728,22 @@ function PastMatchesList({
       .finally(() => setLoading(false));
   }, [password]);
 
+  async function handleDelete(id: string) {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/leagues/recordings/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${password}` },
+      });
+      if (res.ok) {
+        setMatches((prev) => prev.filter((m) => m.id !== id));
+        setConfirmDeleteId(null);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) return <p className="py-8 text-center text-gray-400">Loading…</p>;
   if (matches.length === 0)
     return <p className="py-8 text-center text-gray-400">No matches recorded yet.</p>;
@@ -733,27 +751,58 @@ function PastMatchesList({
   return (
     <div className="space-y-2">
       {matches.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onView(m.id)}
-          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left hover:bg-gray-50"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-gray-900">vs {m.opponentName}</div>
-            <div className="text-xs text-gray-500">{fmt(m.matchDate)}</div>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="font-black tabular-nums text-gray-900">
-              {m.thomSetsWon}–{m.oppSetsWon}
+        <div key={m.id} className="rounded-xl border border-gray-200 bg-white">
+          {confirmDeleteId === m.id ? (
+            <div className="flex items-center justify-between px-4 py-3 gap-3">
+              <p className="text-sm text-gray-700">Delete this match?</p>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(m.id)}
+                  disabled={deleting}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             </div>
-            <div className={`text-xs font-semibold ${
-              m.status === "complete" ? "text-emerald-600" : "text-amber-500"
-            }`}>
-              {m.status === "complete" ? "Complete" : "In progress"}
+          ) : (
+            <div className="flex w-full items-center gap-3 px-4 py-3">
+              <button
+                onClick={() => onView(m.id)}
+                className="flex flex-1 min-w-0 items-center gap-3 text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900">vs {m.opponentName}</div>
+                  <div className="text-xs text-gray-500">{fmt(m.matchDate)}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-black tabular-nums text-gray-900">
+                    {m.thomSetsWon}–{m.oppSetsWon}
+                  </div>
+                  <div className={`text-xs font-semibold ${
+                    m.status === "complete" ? "text-emerald-600" : "text-amber-500"
+                  }`}>
+                    {m.status === "complete" ? "Complete" : "In progress"}
+                  </div>
+                </div>
+                <span className="text-gray-300">›</span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(m.id); }}
+                className="shrink-0 rounded-lg px-2 py-1.5 text-gray-300 hover:bg-red-50 hover:text-red-400"
+                title="Delete match"
+              >
+                ✕
+              </button>
             </div>
-          </div>
-          <span className="text-gray-300">›</span>
-        </button>
+          )}
+        </div>
       ))}
     </div>
   );
