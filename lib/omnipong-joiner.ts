@@ -226,7 +226,7 @@ export async function* joinLeague(
       btn = await findLeagueButton(page, leagueName, leagueDate);
 
       while (btn.type !== "Enter" && Date.now() < target1200Utc && !checkAbort()) {
-        const waitMs = Math.min(15_000, target1200Utc - Date.now());
+        const waitMs = Math.min(5_000, target1200Utc - Date.now());
         yield `${formatTime(getPTNow())} — Button still shows "Info". Polling in ${Math.round(waitMs / 1000)}s...`;
         await sleep(waitMs);
         if (checkAbort()) return;
