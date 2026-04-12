@@ -36,86 +36,29 @@ interface KnownOpponent {
 }
 
 const SHOTS = [
-  { key: "serve",   label: "Serve"   },
-  { key: "push",    label: "Push"    },
-  { key: "chop",    label: "Chop"    },
-  { key: "lob",     label: "Lob"     },
-  { key: "block",   label: "Block"   },
-  { key: "drive",   label: "Drive"   },
-  { key: "counter", label: "Counter" },
-  { key: "flick",   label: "Flick"   },
-  { key: "loop",    label: "Loop"    },
-  { key: "drop",    label: "Drop"    },
-  { key: "smash",   label: "Smash"   },
-  { key: "unknown", label: "?"       },
+  { key: "serve",   label: "Serve",   category: "special"   },
+  { key: "push",    label: "Push",    category: "defensive" },
+  { key: "chop",    label: "Chop",    category: "defensive" },
+  { key: "lob",     label: "Lob",     category: "defensive" },
+  { key: "block",   label: "Block",   category: "defensive" },
+  { key: "drive",   label: "Drive",   category: "neutral"   },
+  { key: "counter", label: "Counter", category: "neutral"   },
+  { key: "flick",   label: "Flick",   category: "offensive" },
+  { key: "loop",    label: "Loop",    category: "offensive" },
+  { key: "drop",    label: "Drop",    category: "offensive" },
+  { key: "smash",   label: "Smash",   category: "offensive" },
+  { key: "unknown", label: "?",       category: "special"   },
 ] as const;
 type ShotKey = (typeof SHOTS)[number]["key"];
 
-// ─── Shot grid for one player+outcome combination ─────────────────────────────
+// ─── One player's column ─────────────────────────────────────────────────────
 
-/**
- * shotBy:   which player hit this shot
- * outcome:  "winner" = shotBy wins the point, "error" = opponent of shotBy wins
- */
-function ShotSection({
-  shotBy,
-  outcome,
-  onTap,
-  disabled,
-}: {
-  shotBy: Player;
-  outcome: "winner" | "error";
-  onTap: (shotBy: Player, shotType: ShotKey, outcome: "winner" | "error") => void;
-  disabled: boolean;
-}) {
-  const isThom = shotBy === "thom";
-  const isWinner = outcome === "winner";
-
-  // Who actually wins the point:
-  // - thom winner → thom wins  (blue bright)
-  // - thom error  → opp wins   (red muted on thom's side)
-  // - opp winner  → opp wins   (red bright)
-  // - opp error   → thom wins  (blue muted on opp's side)
-  const thomWins = (isThom && isWinner) || (!isThom && !isWinner);
-
-  const bgClass = thomWins
-    ? isWinner
-      ? "bg-blue-600 hover:bg-blue-500 active:bg-blue-700"
-      : "bg-blue-200 hover:bg-blue-300 active:bg-blue-400"
-    : isWinner
-      ? "bg-red-500 hover:bg-red-400 active:bg-red-600"
-      : "bg-red-100 hover:bg-red-200 active:bg-red-300";
-
-  const textClass = thomWins
-    ? isWinner
-      ? "text-white"
-      : "text-blue-900"
-    : isWinner
-      ? "text-white"
-      : "text-red-900";
-
-  return (
-    <div className="flex flex-1 flex-col">
-      <div className="py-1 text-center text-xs font-light uppercase tracking-wider">
-        {isWinner ? "Winner / Error forcer" : "Unforced Error"}
-      </div>
-      <div className="grid flex-1 grid-cols-4 grid-rows-3 gap-1 p-1">
-        {SHOTS.map(({ key, label }) => (
-          <button
-            key={key}
-            onPointerDown={() => !disabled && onTap(shotBy, key, outcome)}
-            disabled={disabled}
-            className={`flex flex-col items-center justify-center rounded-xl border-b-4 border-black/20 shadow-sm transition-all active:translate-y-px active:border-b-0 active:shadow-none disabled:opacity-50 ${bgClass} ${textClass}`}
-          >
-            <span className="text-sm font-bold leading-none">{label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function categoryColor(category: string): string {
+  if (category === "defensive") return "bg-sky-100 text-sky-800";
+  if (category === "neutral")   return "bg-amber-100 text-amber-800";
+  if (category === "offensive") return "bg-orange-100 text-orange-800";
+  return "bg-gray-100 text-gray-600"; // special (serve, ?)
 }
-
-// ─── One player's column (winner+error stacked) ───────────────────────────────
 
 function PlayerColumn({
   isServing,
@@ -123,8 +66,11 @@ function PlayerColumn({
   opponentName,
   backhand,
   onBackhandChange,
-  onTap,
+  selectedShot,
+  onShotSelect,
+  onCommit,
   disabled,
+  disableServe,
   pointScore,
   onPointUp,
   onPointDown,
@@ -134,21 +80,27 @@ function PlayerColumn({
   opponentName: string;
   backhand: boolean | null;
   onBackhandChange: (value: boolean | null) => void;
-  onTap: (shotBy: Player, shotType: ShotKey, outcome: "winner" | "error") => void;
+  selectedShot: ShotKey | null;
+  onShotSelect: (shot: ShotKey) => void;
+  onCommit: (outcome: "winner" | "error") => void;
   disabled: boolean;
+  disableServe: boolean;
   pointScore: number;
   onPointUp: () => void;
   onPointDown: () => void;
 }) {
   const isThom = shotBy === "thom";
-  const activeBtn = isThom
+  const activeHandBtn = isThom
     ? "bg-blue-600 text-white shadow-md scale-105"
     : "bg-red-600 text-white shadow-md scale-105";
-  const inactiveBtn = isThom
-    ? "bg-blue-50 text-blue-300 hover:bg-blue-100 hover:text-blue-400"
-    : "bg-red-50 text-red-300 hover:bg-red-100 hover:text-red-400";
+  const inactiveHandBtn = isThom
+    ? "bg-blue-50 text-blue-300 hover:bg-blue-100"
+    : "bg-red-50 text-red-300 hover:bg-red-100";
   const nameColor = isThom ? "text-blue-700" : "text-red-700";
   const adjBtn = "flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs font-black text-gray-400 hover:bg-gray-200 active:scale-90";
+  const selectedShotColor = isThom
+    ? "bg-blue-600 text-white border-blue-800"
+    : "bg-red-600 text-white border-red-800";
 
   function toggleHand(val: boolean) {
     onBackhandChange(backhand === val ? null : val);
@@ -156,10 +108,11 @@ function PlayerColumn({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden rounded-2xl">
+      {/* Header: BH · Name+score · FH */}
       <div className="flex items-stretch gap-1.5 p-1.5">
         <button
           onPointerDown={() => toggleHand(true)}
-          className={`flex flex-1 items-center justify-center rounded-xl py-5 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeBtn : inactiveBtn}`}
+          className={`flex flex-1 items-center justify-center rounded-xl py-5 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === true ? activeHandBtn : inactiveHandBtn}`}
         >
           BH
         </button>
@@ -180,13 +133,52 @@ function PlayerColumn({
         </div>
         <button
           onPointerDown={() => toggleHand(false)}
-          className={`flex flex-1 items-center justify-center rounded-xl py-5 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeBtn : inactiveBtn}`}
+          className={`flex flex-1 items-center justify-center rounded-xl py-5 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${backhand === false ? activeHandBtn : inactiveHandBtn}`}
         >
           FH
         </button>
       </div>
-      <ShotSection shotBy={shotBy} outcome="winner" onTap={onTap} disabled={disabled} />
-      <ShotSection shotBy={shotBy} outcome="error" onTap={onTap} disabled={disabled} />
+
+      {/* Shot grid */}
+      <div className="grid flex-1 grid-cols-4 grid-rows-3 gap-1 p-1">
+        {SHOTS.map(({ key, label, category }) => {
+          const isSelected = selectedShot === key;
+          const isDisabled = disabled || (key === "serve" && disableServe);
+          const colorClass = isSelected
+            ? selectedShotColor
+            : selectedShot !== null
+              ? "bg-gray-100 text-gray-400"
+              : categoryColor(category);
+          return (
+            <button
+              key={key}
+              onPointerDown={() => !isDisabled && onShotSelect(key)}
+              disabled={isDisabled}
+              className={`flex items-center justify-center rounded-xl border-b-4 border-black/15 shadow-sm transition-all active:translate-y-px active:border-b-0 active:shadow-none disabled:opacity-30 ${colorClass} ${isSelected ? "scale-95" : ""}`}
+            >
+              <span className="text-sm font-bold leading-none">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Commit: Winner | Error */}
+      <div className="flex items-stretch gap-1.5 px-1.5 py-2 pb-1.5">
+        <button
+          onPointerDown={() => !disabled && onCommit("winner")}
+          disabled={disabled}
+          className="flex flex-1 items-center justify-center rounded-xl py-4 text-sm font-black uppercase tracking-wide bg-emerald-500 text-white shadow-sm active:scale-95 active:opacity-80 disabled:opacity-40"
+        >
+          ✓ Winner
+        </button>
+        <button
+          onPointerDown={() => !disabled && onCommit("error")}
+          disabled={disabled}
+          className="flex flex-1 items-center justify-center rounded-xl py-4 text-sm font-black uppercase tracking-wide bg-rose-200 text-rose-900 shadow-sm active:scale-95 active:opacity-80 disabled:opacity-40"
+        >
+          ✗ Error
+        </button>
+      </div>
     </div>
   );
 }
@@ -208,6 +200,8 @@ function RecordingPhase({
   const [flash, setFlash] = useState<"set" | "match" | null>(null);
   const [thomBackhand, setThomBackhand] = useState<boolean | null>(null);
   const [oppBackhand, setOppBackhand] = useState<boolean | null>(null);
+  const [thomShot, setThomShot] = useState<ShotKey | null>(null);
+  const [oppShot, setOppShot] = useState<ShotKey | null>(null);
 
   const headers = useCallback(
     () => ({
@@ -223,38 +217,28 @@ function RecordingPhase({
 
   const shortName = match.opponentName.split(" ")[0];
 
-  // ── Record or replace a point ──────────────────────────────────────────────
-  async function handleShot(
-    shotBy: Player,
-    shotType: ShotKey,
-    outcome: "winner" | "error",
-  ) {
+  // ── Record a point ────────────────────────────────────────────────────────
+  async function handleCommit(shotBy: Player, outcome: "winner" | "error") {
     if (busy) return;
     setBusy(true);
     try {
-      // Derive who wins:
-      // shotBy=thom & winner → thom; shotBy=thom & error → opponent; etc.
       const thomWins = (shotBy === "thom") === (outcome === "winner");
       const winner: Player = thomWins ? "thom" : "opponent";
-
+      const shotType = shotBy === "thom" ? thomShot : oppShot;
       const backhand = shotBy === "thom" ? thomBackhand : oppBackhand;
 
       const res = await fetch(`/api/leagues/recordings/${match.id}/points`, {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({
-          winner,
-          shotBy,
-          shotType,
-          pointType: outcome, // "winner" | "error"
-          backhand,
-        }),
+        body: JSON.stringify({ winner, shotBy, shotType, pointType: outcome, backhand }),
       });
       if (!res.ok) return;
       const data = await res.json();
       setState(data.state);
       setThomBackhand(null);
       setOppBackhand(null);
+      setThomShot(null);
+      setOppShot(null);
 
       if (data.state.matchComplete) {
         setFlash("match");
@@ -348,7 +332,7 @@ function RecordingPhase({
   if (state.matchComplete && flash !== null) {
     const thomWon = state.thomSetsWon > state.oppSetsWon;
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-6 bg-white">
+      <div className="flex h-dvh flex-col items-center justify-center gap-6 bg-white">
         <div className="text-7xl">{thomWon ? "🏆" : "💪"}</div>
         <h1 className="text-5xl font-black text-gray-900">
           {thomWon ? "Thom wins!" : `${shortName} wins`}
@@ -367,7 +351,7 @@ function RecordingPhase({
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white select-none">
+    <div className="flex h-dvh flex-col overflow-hidden bg-white select-none">
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className={`shrink-0 border-b transition-colors ${flash === "set" ? "border-yellow-200 bg-yellow-50" : "border-gray-100 bg-white"}`}>
@@ -411,15 +395,18 @@ function RecordingPhase({
       </div>
 
       {/* ── Main shot grid ───────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 gap-2 overflow-hidden p-2">
+      <div className="flex min-h-0 flex-1 gap-7 overflow-hidden p-10 pt-4">
         <PlayerColumn
           isServing={leftPlayer === state.nextServer}
           shotBy={leftPlayer}
           opponentName={shortName}
           backhand={leftPlayer === "thom" ? thomBackhand : oppBackhand}
           onBackhandChange={leftPlayer === "thom" ? setThomBackhand : setOppBackhand}
-          onTap={handleShot}
+          selectedShot={leftPlayer === "thom" ? thomShot : oppShot}
+          onShotSelect={leftPlayer === "thom" ? setThomShot : setOppShot}
+          onCommit={(outcome) => handleCommit(leftPlayer, outcome)}
           disabled={busy}
+          disableServe={rightPlayer === state.nextServer}
           pointScore={leftPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
           onPointUp={() => addBlankPoint(leftPlayer)}
           onPointDown={undo}
@@ -430,8 +417,11 @@ function RecordingPhase({
           opponentName={shortName}
           backhand={rightPlayer === "thom" ? thomBackhand : oppBackhand}
           onBackhandChange={rightPlayer === "thom" ? setThomBackhand : setOppBackhand}
-          onTap={handleShot}
+          selectedShot={rightPlayer === "thom" ? thomShot : oppShot}
+          onShotSelect={rightPlayer === "thom" ? setThomShot : setOppShot}
+          onCommit={(outcome) => handleCommit(rightPlayer, outcome)}
           disabled={busy}
+          disableServe={leftPlayer === state.nextServer}
           pointScore={rightPlayer === "thom" ? state.thomSetScore : state.oppSetScore}
           onPointUp={() => addBlankPoint(rightPlayer)}
           onPointDown={undo}
