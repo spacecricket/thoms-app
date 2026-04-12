@@ -163,7 +163,7 @@ function PlayerColumn({
         >
           BH
         </button>
-        <div className="flex flex-[2] flex-col items-center justify-center gap-0.5 text-center">
+        <div className="flex flex-2 flex-col items-center justify-center gap-0.5 text-center">
           <div className="relative flex min-h-8 items-center justify-center">
             <span className={`text-xs font-black uppercase leading-none tracking-widest ${nameColor}`}>
               {isThom ? "Thom" : opponentName}
@@ -365,14 +365,6 @@ function RecordingPhase({
       </div>
     );
   }
-
-  // Parse date from ISO string without letting UTC→local conversion shift the day
-  const dateLabel = match.matchDate
-    ? (() => {
-        const [y, m, d] = match.matchDate!.split("T")[0].split("-");
-        return `${parseInt(m)}/${parseInt(d)}/${y.slice(2)}`;
-      })()
-    : null;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white select-none">
