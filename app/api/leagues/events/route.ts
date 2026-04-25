@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { scrapeEventsList } from "@/lib/scraper";
+import { scrapeEventsList, fetchEventsListRaw } from "@/lib/scraper";
 import { getImportedIds } from "@/lib/analysis";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +10,25 @@ export async function GET(request: NextRequest) {
   const authError = requireAdmin(request);
   if (authError) return authError;
 
+  // ?raw=1 — dump the raw rendered page text for debugging
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("raw") === "1") {
+    try {
+      const { text, links } = await fetchEventsListRaw();
+      return new NextResponse(
+        `=== LINKS (${links.length}) ===\n${links.map((l) => l.id).join("\n")}\n\n=== RAW TEXT ===\n${text}`,
+        { headers: { "Content-Type": "text/plain; charset=utf-8" } },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new NextResponse(`Error: ${message}`, { status: 500, headers: { "Content-Type": "text/plain" } });
+    }
+  }
+
   try {
     const importedIds = await getImportedIds();
     const events = await scrapeEventsList(importedIds);
 
-    const { searchParams } = new URL(request.url);
     const nameFilter = searchParams.get("name");
     const dateFilter = searchParams.get("date");
 

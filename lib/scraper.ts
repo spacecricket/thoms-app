@@ -67,7 +67,7 @@ export async function fetchRenderedText(
   throw new Error("fetchRenderedText: all retries exhausted");
 }
 
-async function fetchEventsListData(): Promise<{
+export async function fetchEventsListRaw(): Promise<{
   text: string;
   links: { id: string }[];
 }> {
@@ -239,55 +239,71 @@ function parsePlayerSection(lines: string[]): {
   if (!usattMatch) return null;
 
   const name = lines[usattIdx + 1]?.trim();
-  let ratingBeforeStr = lines[usattIdx + 2]?.trim();
-  if (ratingBeforeStr === "Unrated") ratingBeforeStr = "0";
-  const ratingAfterStr = lines[usattIdx + 3]?.trim();
+  if (!name) return null;
 
-  if (!name || !ratingBeforeStr || !ratingAfterStr) return null;
+  let ratingBeforeStr = lines[usattIdx + 2]?.trim() ?? "0";
+  if (ratingBeforeStr.toLowerCase() === "unrated") ratingBeforeStr = "0";
+  const ratingBefore = /^\d+$/.test(ratingBeforeStr) ? Number(ratingBeforeStr) : 0;
+
+  // Page formats observed:
+  //   Old: ratingBefore, ratingAfter (large number e.g. 813), ratingChange (e.g. 12)
+  //   New: ratingBefore, ratingChange (small number e.g. 2) — no explicit ratingAfter line
+  // Distinguish by magnitude: changes are typically < 50; after-ratings are ≥ 100.
+  const next = lines[usattIdx + 3]?.trim() ?? "";
+  const nextNum = /^-?\d+$/.test(next) ? Number(next) : null;
+  let ratingAfter: number;
+  if (nextNum === null) {
+    ratingAfter = ratingBefore; // no second number — single-rating format
+  } else if (Math.abs(nextNum) < 100) {
+    ratingAfter = ratingBefore + nextNum; // it's a change delta
+  } else {
+    ratingAfter = nextNum; // it's a full rating-after value (old format)
+  }
 
   return {
     usattId: usattMatch[1],
     name,
-    ratingBefore: Number(ratingBeforeStr),
-    ratingAfter: Number(ratingAfterStr),
+    ratingBefore,
+    ratingAfter,
   };
 }
 
 export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
   const matches: ScrapedMatch[] = [];
 
-  let content = rawText;
-  const startIdx = content.indexOf("Matches Found");
-  if (startIdx === -1) return [];
-  content = content.slice(startIdx + "Matches Found".length);
-  const endIdx = content.indexOf("You've reached");
+  // Find content start — "X Matches Found" (case-insensitive)
+  const startIdx = rawText.search(/\d+\s+matches\s+found/i);
+  if (startIdx === -1) {
+    console.warn("parseMatchHistoryText: 'Matches Found' not found in page text. First 300 chars:", rawText.slice(0, 300));
+    return [];
+  }
+  let content = rawText.slice(startIdx);
+
+  // Trim trailing boilerplate (case-insensitive for apostrophe variants)
+  const endIdx = content.search(/you.ve reached/i);
   if (endIdx !== -1) content = content.slice(0, endIdx);
 
-  // Split on "Match Result" — each match has a winner section before and loser section after
-  const blocks = content.split("Match Result");
+  // Split into match blocks. Two formats observed:
+  //   Old: "TSWinner" concatenated on one line  → split on (?=[A-Z]{2}Winner)
+  //   New: "TS\nWinner" on separate lines       → split on \n(?=[A-Z]{2}\nWinner)
+  // Lookahead keeps the delimiter at the start of each block.
+  const blocks = content.split(/\n(?=[A-Z]{2}\nWinner)|(?=[A-Z]{2}Winner)/);
 
-  // Blocks come in pairs: [winner section, loser+next winner section, ...]
-  // The winner section ends right before "Match Result", and the loser section starts after it
-  // We process pairs: blocks[i] has the winner, blocks[i+1] starts with the loser (+ score line)
-  for (let i = 0; i < blocks.length - 1; i++) {
-    const winnerBlock = blocks[i];
-    const afterMatchResult = blocks[i + 1];
+  for (const block of blocks) {
+    if (!block.includes("Winner") || !block.includes("Match Result")) continue;
 
-    // Winner block: everything from the last "Winner" marker to the end
-    const winnerStart = winnerBlock.lastIndexOf("Winner");
-    if (winnerStart === -1) continue;
-    const winnerLines = winnerBlock.slice(winnerStart).split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const lines = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
-    // After "Match Result": first line is score, then loser section until next "Winner"
-    const afterLines = afterMatchResult.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-    // Score is the first line (e.g., "3-2")
-    const scoreLine = afterLines[0];
-    const scoreMatch = scoreLine?.match(/'?(\d+)-(\d+)'?/);
+    // Score line: contains digits-digits (possibly quoted)
+    const scoreMatch = lines.map((l) => l.match(/'?(\d+)-(\d+)'?/)).find(Boolean);
     if (!scoreMatch) continue;
 
-    // Loser lines: from after score until "Winner" or end
-    const nextWinnerIdx = afterLines.findIndex((l, idx) => idx > 0 && l === "Winner");
-    const loserLines = afterLines.slice(1, nextWinnerIdx === -1 ? undefined : nextWinnerIdx);
+    // Split block at "Match Result": winner section before, loser section after
+    const matchResultIdx = lines.findIndex((l) => l.includes("Match Result"));
+    if (matchResultIdx === -1) continue;
+
+    const winnerLines = lines.slice(0, matchResultIdx);
+    const loserLines = lines.slice(matchResultIdx + 1);
 
     const winner = parsePlayerSection(winnerLines);
     const loser = parsePlayerSection(loserLines);
@@ -322,7 +338,7 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
 export async function scrapeEventsList(
   importedIds: Record<string, string>,
 ): Promise<ScrapedEvent[]> {
-  const { text, links } = await fetchEventsListData();
+  const { text, links } = await fetchEventsListRaw();
   return parseEventsListText(text, links).map((e) => ({
     ...e,
     alreadyImported: e.id in importedIds,
