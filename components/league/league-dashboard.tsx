@@ -194,6 +194,12 @@ export function LeagueDashboard({ data }: Props) {
             </div>
             <div className="flex gap-2 self-center">
               <Link
+                href="/leagues/players"
+                className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
+              >
+                Player Ratings
+              </Link>
+              <Link
                 href="/leagues/auto-join"
                 className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >

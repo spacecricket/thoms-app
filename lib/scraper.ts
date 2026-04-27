@@ -30,23 +30,42 @@ export async function fetchRenderedText(
     const browser = await chromium.launch({ headless: true });
     try {
       const page = await browser.newPage();
-      await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
-      // Wait for SPA to finish rendering:
-      // The page goes through: "loading..." → "0 Matches Found" → actual data
+      // "load" instead of "networkidle" — the SPA keeps SignalR connections open
+      // which prevents networkidle from ever firing.
+      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+
+      // Wait for initial data to appear (past loading spinner and empty state)
       await page.waitForFunction(
         () => {
           const text = document.body.innerText.toLowerCase();
-          if (text.includes("loading")) return false;
-          if (text.includes("0 matches found")) return false;
-          if (text.includes("0 competitions found")) return false;
-          return true;
+          return !text.includes("loading") && !text.includes("0 matches found");
         },
         { timeout: 30_000 },
       ).catch(() => {});
-      await page.waitForTimeout(1_000);
+
+      // Scroll to trigger lazy-loaded match blocks, checking after each scroll
+      // whether all expected blocks have appeared.
+      let prevCount = 0;
+      for (let scroll = 0; scroll < 8; scroll++) {
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.waitForTimeout(1_000);
+
+        const { found, expected } = await page.evaluate(() => {
+          const t = document.body.innerText;
+          const header = t.match(/(\d+)\s+matches?\s+found/i);
+          return {
+            expected: header ? Number(header[1]) : 0,
+            found: (t.match(/Match Result/g) ?? []).length,
+          };
+        });
+
+        if (expected > 0 && found >= expected) break; // all blocks loaded
+        if (found === prevCount && scroll > 1) break;  // nothing new loading
+        prevCount = found;
+      }
+
       const text = await page.locator("body").innerText();
 
-      // If still stuck on empty/loading state, retry
       const lower = text.toLowerCase();
       if (
         attempt < maxRetries &&
@@ -63,7 +82,6 @@ export async function fetchRenderedText(
     }
   }
 
-  // Should not reach here, but TypeScript needs it
   throw new Error("fetchRenderedText: all retries exhausted");
 }
 
@@ -230,6 +248,7 @@ function parsePlayerSection(lines: string[]): {
   name: string;
   ratingBefore: number;
   ratingAfter: number;
+  inferredDelta: boolean;
 } | null {
   // Find the USATT# line
   const usattIdx = lines.findIndex((l) => /^USATT#\s*\d+/.test(l));
@@ -252,12 +271,14 @@ function parsePlayerSection(lines: string[]): {
   const next = lines[usattIdx + 3]?.trim() ?? "";
   const nextNum = /^-?\d+$/.test(next) ? Number(next) : null;
   let ratingAfter: number;
+  let inferredDelta = false;
   if (nextNum === null) {
     ratingAfter = ratingBefore; // no second number — single-rating format
   } else if (Math.abs(nextNum) < 100) {
-    ratingAfter = ratingBefore + nextNum; // it's a change delta
+    ratingAfter = ratingBefore + nextNum; // it's a change delta (unsigned on page)
+    inferredDelta = true;
   } else {
-    ratingAfter = nextNum; // it's a full rating-after value (old format)
+    ratingAfter = nextNum; // it's a full rating-after value (old format, sign already correct)
   }
 
   return {
@@ -265,6 +286,7 @@ function parsePlayerSection(lines: string[]): {
     name,
     ratingBefore,
     ratingAfter,
+    inferredDelta,
   };
 }
 
@@ -283,11 +305,13 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
   const endIdx = content.search(/you.ve reached/i);
   if (endIdx !== -1) content = content.slice(0, endIdx);
 
-  // Split into match blocks. Two formats observed:
-  //   Old: "TSWinner" concatenated on one line  → split on (?=[A-Z]{2}Winner)
-  //   New: "TS\nWinner" on separate lines       → split on \n(?=[A-Z]{2}\nWinner)
+  // Split into match blocks. Formats observed:
+  //   Old: "TSWinner" concatenated          → split on (?=[A-Z]{2}Winner)
+  //   New: "TS\nWinner" on separate lines   → split on \n(?=[A-Z]{2}\nWinner)
+  //   New (loss): "Winner\nUSATT#" with no  → split on \n(?=Winner\nUSATT#)
+  //     initials prefix (when Thom is loser and opponent's section has no initials rendered)
   // Lookahead keeps the delimiter at the start of each block.
-  const blocks = content.split(/\n(?=[A-Z]{2}\nWinner)|(?=[A-Z]{2}Winner)/);
+  const blocks = content.split(/\n(?=[A-Z]{2}\nWinner)|\n(?=Winner\nUSATT#)|(?=[A-Z]{2}Winner)/);
 
   for (const block of blocks) {
     if (!block.includes("Winner") || !block.includes("Match Result")) continue;
@@ -312,6 +336,13 @@ export function parseMatchHistoryText(rawText: string): ScrapedMatch[] {
     const thomWon = winner.usattId === THOM_USATT;
     const thom = thomWon ? winner : loser;
     const opponent = thomWon ? loser : winner;
+
+    // When Thom is the loser and the delta was inferred (new page format), the page
+    // shows the absolute value of the delta — negate it so the sign is correct.
+    if (!thomWon && thom.inferredDelta) {
+      const delta = thom.ratingAfter - thom.ratingBefore;
+      thom.ratingAfter = thom.ratingBefore - delta;
+    }
 
     const s1 = Number(scoreMatch[1]);
     const s2 = Number(scoreMatch[2]);
@@ -372,7 +403,14 @@ export async function scrapeEventDetail(
   const lost = matches.filter((m) => !m.thomWon).length;
 
   const ratingBefore = matches[0].thomRatingBefore;
-  const ratingAfter = matches[matches.length - 1].thomRatingAfter;
+  // Sum the signed per-match deltas. Necessary because JustGo's new format shows
+  // the pre-event rating (e.g. 822) as ratingBefore for every match, so the last
+  // match's thomRatingAfter alone isn't the cumulative final rating.
+  const netChange = matches.reduce(
+    (sum, m) => sum + (m.thomRatingAfter - m.thomRatingBefore),
+    0,
+  );
+  const ratingAfter = ratingBefore + netChange;
 
   return {
     id: eventId,
