@@ -48,7 +48,7 @@ async function parseOmniPong(url: string): Promise<{ title: string; players: Omn
   return { title, players };
 }
 
-async function findProfileUrl(page: Page, first: string, last: string): Promise<string | null> {
+async function findProfileUrls(page: Page, first: string, last: string): Promise<string[]> {
   await page.goto(
     `${WEBLET_BASE}/ranking?search=${encodeURIComponent(`${first} ${last}`)}`,
     { waitUntil: "load", timeout: 45_000 },
@@ -74,16 +74,13 @@ async function findProfileUrl(page: Page, first: string, last: string): Promise<
   const firstLower = first.toLowerCase();
   const lastLower = last.toLowerCase();
 
-  const exact = links.find(
-    (l) =>
-      lastLower.split(" ").every((p) => l.text.includes(p)) &&
-      firstLower.split(" ").every((p) => l.text.includes(p)),
-  );
-  if (exact) return exact.href;
-
-  return (
-    links.find((l) => lastLower.split(" ").every((p) => l.text.includes(p)))?.href ?? null
-  );
+  return links
+    .filter(
+      (l) =>
+        lastLower.split(" ").every((p) => l.text.includes(p)) &&
+        firstLower.split(" ").every((p) => l.text.includes(p)),
+    )
+    .map((l) => l.href);
 }
 
 async function readLeagueRating(
@@ -160,11 +157,27 @@ export async function POST(request: NextRequest) {
         const results: PlayerResult[] = [];
         try {
           for (const player of players) {
-            const profileUrl = await findProfileUrl(page, player.first, player.last);
+            const profileUrls = await findProfileUrls(page, player.first, player.last);
             let leagueRating: number | null = null;
             let tournamentRating: number | null = null;
-            if (profileUrl) {
-              ({ leagueRating, tournamentRating } = await readLeagueRating(page, profileUrl));
+            if (profileUrls.length === 1) {
+              ({ leagueRating, tournamentRating } = await readLeagueRating(page, profileUrls[0]));
+            } else if (profileUrls.length > 1) {
+              // Multiple players share this name — pick the profile whose league rating
+              // is closest to the OmniPong seed rating to avoid matching the wrong person.
+              let bestDiff = Infinity;
+              for (const url of profileUrls) {
+                const r = await readLeagueRating(page, url);
+                const diff =
+                  r.leagueRating !== null && player.seedRating !== null
+                    ? Math.abs(r.leagueRating - player.seedRating)
+                    : Infinity;
+                if (diff < bestDiff) {
+                  bestDiff = diff;
+                  leagueRating = r.leagueRating;
+                  tournamentRating = r.tournamentRating;
+                }
+              }
             }
             const result: PlayerResult = { ...player, leagueRating, tournamentRating };
             results.push(result);
