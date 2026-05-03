@@ -22,13 +22,20 @@ export interface PlayerResult extends OmniPongPlayer {
   tournamentRating: number | null;
 }
 
-async function parseOmniPong(url: string): Promise<{ title: string; players: OmniPongPlayer[] }> {
+async function parseOmniPong(
+  url: string,
+): Promise<{ title: string; players: OmniPongPlayer[]; ratingCap: number | null }> {
   const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
   if (!res.ok) throw new Error(`OmniPong fetch failed: ${res.status}`);
   const html = await res.text();
 
   const titleMatch = html.match(/<h3[^>]*>(.*?)<\/h3>/is);
   const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : "Unknown Event";
+
+  // "Spttc Sunday League U-1300 5/3" → 1300 (used to filter out wrong-person matches
+  // when multiple USATT profiles share a name and the player's seed rating is 0/missing).
+  const capMatch = title.match(/\bu-?(\d{3,4})\b/i);
+  const ratingCap = capMatch ? Number(capMatch[1]) : null;
 
   // Each player row: <a href="...t=109...">-Last, First</a></td> then 2 <td>s then seed rating <td>
   const linkRe =
@@ -45,7 +52,7 @@ async function parseOmniPong(url: string): Promise<{ title: string; players: Omn
     players.push({ first, last, name, seedRating });
   }
 
-  return { title, players };
+  return { title, players, ratingCap };
 }
 
 async function findProfileUrls(page: Page, first: string, last: string): Promise<string[]> {
@@ -73,13 +80,17 @@ async function findProfileUrls(page: Page, first: string, last: string): Promise
 
   const firstLower = first.toLowerCase();
   const lastLower = last.toLowerCase();
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // Check that first and last appear as an adjacent phrase, not as independent
+  // substrings scattered across the text. This prevents "zhan" + "yu" from
+  // matching "yuxuan zhang" because "zhan yu" is never adjacent in that string.
+  // The right-side lookahead (?![a-z]) stops "chen" matching inside "cheng".
+  const reFL = new RegExp(`(?<![a-z])${esc(firstLower)}\\s+${esc(lastLower)}(?![a-z])`);
+  const reLF = new RegExp(`(?<![a-z])${esc(lastLower)},?\\s+${esc(firstLower)}(?![a-z])`);
 
   return links
-    .filter(
-      (l) =>
-        lastLower.split(" ").every((p) => l.text.includes(p)) &&
-        firstLower.split(" ").every((p) => l.text.includes(p)),
-    )
+    .filter((l) => reFL.test(l.text) || reLF.test(l.text))
     .map((l) => l.href);
 }
 
@@ -141,7 +152,7 @@ export async function POST(request: NextRequest) {
 
       try {
         send({ type: "status", message: "Fetching OmniPong page..." });
-        const { title, players } = await parseOmniPong(body.url!);
+        const { title, players, ratingCap } = await parseOmniPong(body.url!);
 
         if (players.length === 0) {
           send({ type: "error", message: "No players found on that OmniPong page. Check the URL." });
@@ -163,21 +174,54 @@ export async function POST(request: NextRequest) {
             if (profileUrls.length === 1) {
               ({ leagueRating, tournamentRating } = await readLeagueRating(page, profileUrls[0]));
             } else if (profileUrls.length > 1) {
-              // Multiple players share this name — pick the profile whose league rating
-              // is closest to the OmniPong seed rating to avoid matching the wrong person.
-              let bestDiff = Infinity;
+              // Multiple USATT profiles share this name. Disambiguate, in order:
+              //   1. Closest league rating to the OmniPong seed rating (if seed > 0).
+              //   2. Highest league rating that's still ≤ the tournament's rating cap
+              //      (e.g. "U-1300" rules out a Kevin Chen with a 1672 rating).
+              const candidates: Array<{ leagueRating: number | null; tournamentRating: number | null }> = [];
               for (const url of profileUrls) {
-                const r = await readLeagueRating(page, url);
-                const diff =
-                  r.leagueRating !== null && player.seedRating !== null
-                    ? Math.abs(r.leagueRating - player.seedRating)
-                    : Infinity;
-                if (diff < bestDiff) {
-                  bestDiff = diff;
-                  leagueRating = r.leagueRating;
-                  tournamentRating = r.tournamentRating;
+                candidates.push(await readLeagueRating(page, url));
+              }
+
+              if (player.seedRating !== null && player.seedRating > 0) {
+                let bestDiff = Infinity;
+                for (const c of candidates) {
+                  if (c.leagueRating === null) continue;
+                  const diff = Math.abs(c.leagueRating - player.seedRating);
+                  if (diff < bestDiff) {
+                    bestDiff = diff;
+                    leagueRating = c.leagueRating;
+                    tournamentRating = c.tournamentRating;
+                  }
+                }
+              } else if (ratingCap !== null) {
+                // For zero-seed (unrated) players in a capped league, prefer the
+                // lowest-rated match under the cap — same-name strangers with high
+                // ratings are likelier to be the wrong person.
+                let bestUnderCap = Infinity;
+                for (const c of candidates) {
+                  if (c.leagueRating === null || c.leagueRating > ratingCap) continue;
+                  if (c.leagueRating < bestUnderCap) {
+                    bestUnderCap = c.leagueRating;
+                    leagueRating = c.leagueRating;
+                    tournamentRating = c.tournamentRating;
+                  }
                 }
               }
+            }
+
+            // Sanity check: when a player has no seed rating from OmniPong (i.e. they're
+            // new — like Zhan Yu, Kevin Chen in this U-1300 league), the loose name
+            // matcher can latch onto a much higher-rated stranger. Reject any match
+            // whose league rating is well above the tournament's cap.
+            if (
+              (player.seedRating === null || player.seedRating === 0) &&
+              ratingCap !== null &&
+              leagueRating !== null &&
+              leagueRating > ratingCap
+            ) {
+              leagueRating = null;
+              tournamentRating = null;
             }
             const result: PlayerResult = { ...player, leagueRating, tournamentRating };
             results.push(result);
