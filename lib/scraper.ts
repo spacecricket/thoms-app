@@ -47,7 +47,7 @@ export async function fetchRenderedText(
       // whether all expected blocks have appeared.
       let prevCount = 0;
       for (let scroll = 0; scroll < 8; scroll++) {
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.evaluate(() => document.body && window.scrollTo(0, document.body.scrollHeight));
         await page.waitForTimeout(1_000);
 
         const { found, expected } = await page.evaluate(() => {
@@ -106,7 +106,7 @@ export async function fetchEventsListRaw(): Promise<{
     // Scroll to load all events (infinite scroll, ~10 per batch)
     let prevCount = 0;
     for (let attempt = 0; attempt < 10; attempt++) {
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.evaluate(() => document.body && window.scrollTo(0, document.body.scrollHeight));
       await page.waitForTimeout(1_200);
       const count = await page
         .locator('a[href*="profile-matche-history"]')
