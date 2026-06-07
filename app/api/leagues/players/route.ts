@@ -138,10 +138,14 @@ export async function POST(request: NextRequest) {
   const authError = requireAdmin(request);
   if (authError) return authError;
 
-  const body = await request.json() as { url?: string };
+  const body = await request.json() as {
+    url?: string;
+    knownRatings?: Record<string, { leagueRating: number | null; tournamentRating: number | null }>;
+  };
   if (!body.url) {
     return new Response(JSON.stringify({ error: "url is required" }), { status: 400 });
   }
+  const knownRatings = body.knownRatings ?? {};
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -159,15 +163,38 @@ export async function POST(request: NextRequest) {
           return;
         }
 
+        const newPlayers = players.filter((p) => !(p.name in knownRatings));
         send({ type: "start", title, total: players.length });
+
+        const results: PlayerResult[] = [];
+
+        // Emit cached players immediately as progress events
+        for (const player of players) {
+          if (player.name in knownRatings) {
+            const cached = knownRatings[player.name];
+            const result: PlayerResult = { ...player, ...cached };
+            results.push(result);
+            send({ type: "progress", player: result, done: results.length, total: players.length });
+          }
+        }
+
+        if (newPlayers.length === 0) {
+          results.sort((a, b) => {
+            if (a.leagueRating === null && b.leagueRating === null) return 0;
+            if (a.leagueRating === null) return 1;
+            if (b.leagueRating === null) return -1;
+            return b.leagueRating - a.leagueRating;
+          });
+          send({ type: "done", results });
+          return;
+        }
 
         const { chromium } = await import("playwright");
         const browser = await chromium.launch({ headless: true });
         const page = await browser.newPage();
 
-        const results: PlayerResult[] = [];
         try {
-          for (const player of players) {
+          for (const player of newPlayers) {
             const profileUrls = await findProfileUrls(page, player.first, player.last);
             let leagueRating: number | null = null;
             let tournamentRating: number | null = null;

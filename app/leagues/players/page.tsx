@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PlayerResult } from "@/app/api/leagues/players/route";
+
+type RatingCache = Record<string, { leagueRating: number | null; tournamentRating: number | null }>;
 
 type SSEEvent =
   | { type: "status"; message: string }
@@ -19,6 +21,7 @@ export default function PlayersPage() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [rows, setRows] = useState<PlayerResult[]>([]);
   const [done, setDone] = useState(false);
+  const ratingCache = useRef<RatingCache>({});
 
   useEffect(() => {
     const saved = sessionStorage.getItem("admin_pw");
@@ -43,7 +46,7 @@ export default function PlayersPage() {
           Authorization: `Bearer ${password}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url: omniPongUrl }),
+        body: JSON.stringify({ url: omniPongUrl, knownRatings: ratingCache.current }),
       });
 
       if (res.status === 401) {
@@ -84,6 +87,9 @@ export default function PlayersPage() {
               setRows(event.results);
               setDone(true);
               setLoading(false);
+              for (const r of event.results) {
+                ratingCache.current[r.name] = { leagueRating: r.leagueRating, tournamentRating: r.tournamentRating };
+              }
             } else if (event.type === "error") {
               setError(event.message);
               setLoading(false);
