@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM node:22-slim AS base
-RUN corepack enable pnpm
+# RUN corepack enable pnpm
 
 # ── Install Playwright's OS-level deps ────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,18 +14,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # ── Install deps ──────────────────────────────────────────────────────────────
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm install --frozen-lockfile
 
 # ── Install Playwright Chromium ───────────────────────────────────────────────
 RUN npx playwright install chromium
 
 # ── Copy source & build ──────────────────────────────────────────────────────
 COPY . .
-RUN pnpm build
+RUN npm run build
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
-CMD ["pnpm", "start", "--hostname", "0.0.0.0"]
+CMD ["npm", "start", "--hostname", "0.0.0.0"]
