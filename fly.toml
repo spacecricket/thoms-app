@@ -16,3 +16,6 @@ primary_region = 'sjc'
   memory = '2gb'
   cpu_kind = 'shared'
   cpus = 1
+
+[deploy]
+  release_command = "npx prisma migrate deploy"

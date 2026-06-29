@@ -1,7 +1,10 @@
-# syntax=docker/dockerfile:1
+# syntax = docker/dockerfile:1
 
-FROM node:22-slim AS base
-# RUN corepack enable pnpm
+# Adjust NODE_VERSION as desired
+ARG NODE_VERSION=24.5.0
+FROM node:${NODE_VERSION}-slim AS base
+
+LABEL fly_launch_runtime="Next.js/Prisma"
 
 # ── Install Playwright's OS-level deps ────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -11,21 +14,55 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxfixes3 libxrandr2 libxshmfence1 xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
+# Next.js/Prisma app lives here
 WORKDIR /app
 
-# ── Install deps ──────────────────────────────────────────────────────────────
-COPY package.json package-lock.json ./
-RUN npm install --frozen-lockfile
+# Set production environment
+ENV NODE_ENV="production"
+
+
+# Throw-away build stage to reduce size of final image
+FROM base AS build
+
+# Install packages needed to build node modules
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential node-gyp openssl pkg-config python-is-python3
+
+# Install node modules
+COPY package-lock.json package.json ./
+COPY prisma .
+RUN npm ci --include=dev
 
 # ── Install Playwright Chromium ───────────────────────────────────────────────
 RUN npx playwright install chromium
 
-# ── Copy source & build ──────────────────────────────────────────────────────
-COPY . .
-RUN npm run build
+# Generate Prisma Client
+RUN npx prisma generate
 
-# ── Run ───────────────────────────────────────────────────────────────────────
+# Copy application code
+COPY . .
+
+# Build application
+RUN npx next build --experimental-build-mode compile
+
+# Remove development dependencies
+RUN npm prune --omit=dev
+
+
+# Final stage for app image
+FROM base
+
+# Install packages needed for deployment
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y openssl && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Copy built application
+COPY --from=build /app /app
+
+# Entrypoint prepares the database.
+# ENTRYPOINT [ "/app/docker-entrypoint.js" ]
+
+# Start the server by default, this can be overwritten at runtime
 EXPOSE 3000
-ENV PORT=3000
-ENV NODE_ENV=production
-CMD ["npm", "start", "--hostname", "0.0.0.0"]
+CMD [ "npm", "run", "start" ]
