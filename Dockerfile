@@ -33,9 +33,6 @@ COPY package-lock.json package.json ./
 COPY prisma .
 RUN npm ci --include=dev
 
-# ── Install Playwright Chromium ───────────────────────────────────────────────
-RUN npx playwright install chromium
-
 # Generate Prisma Client
 RUN npx prisma generate
 
