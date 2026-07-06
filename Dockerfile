@@ -57,6 +57,10 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
+
+# ── Install Playwright Chromium ───────────────────────────────────────────────
+RUN npx playwright install chromium
+
 # Copy built application
 COPY --from=build /app /app
 
