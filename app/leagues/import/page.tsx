@@ -120,7 +120,7 @@ export default function AdminPage() {
       </div>
 
       {/* Auth + Search */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <label className="block text-xs text-gray-500">Admin Password</label>
           <input
@@ -129,18 +129,6 @@ export default function AdminPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="mt-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
             placeholder="Password"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500">
-            Filter by Name
-          </label>
-          <input
-            type="text"
-            value={nameFilter}
-            onChange={(e) => setNameFilter(e.target.value)}
-            className="mt-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500"
-            placeholder="e.g. Saturday Night"
           />
         </div>
         <button
