@@ -111,12 +111,6 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold text-gray-900">
           League Admin — Import Events
         </h1>
-        <Link
-          href="/leagues/auto-join"
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          Join League →
-        </Link>
       </div>
 
       {/* Auth + Search */}
