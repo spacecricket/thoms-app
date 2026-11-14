@@ -194,12 +194,6 @@ export function LeagueDashboard({ data }: Props) {
             </div>
             <div className="flex gap-2 self-center">
               <Link
-                href="/leagues/play-by-play"
-                className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-500"
-              >
-                ● Play by play
-              </Link>
-              <Link
                 href="/leagues/import"
                 className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
               >

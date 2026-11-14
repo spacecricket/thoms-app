@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { AnalysisData, H2HRow, H2HMatchDetail, MatchRecord, ScrapedEventDetail } from "./types";
+import type { AnalysisData, H2HRow, H2HMatchDetail, ScrapedEventDetail } from "./types";
 
 export async function getAnalysis(): Promise<AnalysisData> {
   const [events, matches, linkedLiveMatches] = await Promise.all([

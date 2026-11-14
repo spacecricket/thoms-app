@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
 import type { ScrapedEvent } from "@/lib/types";
 
 export default function AdminPage() {
@@ -14,7 +13,6 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [events, setEvents] = useState<ScrapedEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [nameFilter, setNameFilter] = useState("");
   const [importingIds, setImportingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [statusMessages, setStatusMessages] = useState<
@@ -34,7 +32,6 @@ export default function AdminPage() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (nameFilter) params.set("name", nameFilter);
       const res = await fetch(
         `/api/leagues/events?${params.toString()}`,
         { headers: headers() },
