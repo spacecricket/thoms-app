@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
+    "ratings:omnipong": "tsx scripts/omnipong-ratings.ts",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push"
   },
