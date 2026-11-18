@@ -16,6 +16,16 @@ export const maxDuration = 300;
  * The data is public and read-only, so this endpoint does not require admin auth.
  */
 export async function GET(request: NextRequest) {
+  // Local-only tool: one request fans out to ~120 OmniPong pages, which is fine on
+  // a Node server but exceeds Cloudflare Workers' subrequest budget. Use
+  // `npm run ratings:omnipong` or `npm run dev` instead.
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Tournament rating prediction is only available when running locally." },
+      { status: 404 },
+    );
+  }
+
   const params = request.nextUrl.searchParams;
   const raw = params.get("url") ?? params.get("r") ?? params.get("tournamentId") ?? "";
   const id = tournamentIdFromInput(raw);

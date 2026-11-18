@@ -1,0 +1,5 @@
+# Copy to `.dev.vars` to run `npm run preview` (Wrangler/workerd).
+# `next dev` uses `.env` instead; these are the Worker-runtime equivalents.
+DATABASE_URL="postgresql://user:password@host-pooler.region.aws.neon.tech/dbname?sslmode=require"
+ADMIN_PASSWORD=changeme
+NEXTJS_ENV=development

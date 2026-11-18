@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import {
   predictTournamentRatingsCached,
   tournamentIdFromInput,
@@ -18,6 +19,9 @@ export default async function TournamentRatingPredictorPage({
 }: {
   searchParams: Promise<{ url?: string | string[] }>;
 }) {
+  // Local-only tool (see the matching check in the API route).
+  if (process.env.NODE_ENV === "production") notFound();
+
   const { url } = await searchParams;
   const initialUrl = (Array.isArray(url) ? url[0] : url)?.trim() ?? "";
 

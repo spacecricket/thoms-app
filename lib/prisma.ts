@@ -1,23 +1,25 @@
 import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { neonConfig } from "@neondatabase/serverless";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+
+// The Neon serverless driver talks to Postgres over WebSocket instead of TCP, so
+// the same code runs in Node and on Cloudflare Workers. Node 22+ and Workers both
+// expose a global WebSocket (`ws` can be supplied instead if that ever changes).
+if (typeof WebSocket !== "undefined") {
+  neonConfig.webSocketConstructor = WebSocket;
+}
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
-  // Pass a PoolConfig so @prisma/adapter-pg maintains a connection pool.
   // Use the Neon *pooled* connection string (the one with "-pooler" in the
-  // hostname from the Neon console) as DATABASE_URL so pgBouncer keeps a
-  // warm connection to the database, eliminating Neon cold-start delays.
-  const adapter = new PrismaPg({
-    connectionString,
-    max: 10,            // max connections in the pool
-    idleTimeoutMillis: 30_000,  // release idle connections after 30s
-    connectionTimeoutMillis: 5_000,
-  });
+  // hostname from the Neon console) so pgBouncer keeps a warm connection to the
+  // database, eliminating Neon cold-start delays.
+  const adapter = new PrismaNeon({ connectionString });
   return new PrismaClient({ adapter });
 }
 

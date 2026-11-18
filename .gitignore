@@ -6,7 +6,6 @@
 .pnp.*
 .yarn/*
 !.yarn/patches
-!.yarn/plugins
 !.yarn/releases
 !.yarn/versions
 
@@ -39,6 +38,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cloudflare
+.open-next/
+.wrangler/
+.dev.vars
+cloudflare-env.d.ts
 
 /app/generated/prisma
 /.idea/
