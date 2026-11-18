@@ -1,77 +1,97 @@
 # thom's app
 
-A hobby project built to explore vibe coding — the practice of building software through natural conversation with AI, letting ideas flow directly into working code and watching your competence slowly drain away ;).
+A personal table tennis stats tracker for one player, built as a vibe-coding hobby project:
+ideas go in through conversation, code comes out, and your competence slowly drains away ;).
 
-The public view is live at **[https://thom.so](https://thom.so)**.
+Live at **[https://thom.so](https://thom.so)**.
 
-## What this app does
+## What it does
 
-This is a personal table tennis stats tracker built around one player: Thom. It pulls match results from USATT (the US governing body for table tennis) via JustGo, their competition management platform, and presents them in a dashboard with:
-
-- **Match history** — every competitive result, organised by event, with win/loss record and rating progression over time
-- **Head-to-head breakdowns** — drill into any opponent to see the full history of matches, set scores, and trends
-- **Live match recorder** — an iPad-optimised point-by-point recording interface for capturing matches in real time, including shot type (loop, push, drive, etc.), backhand vs forehand, whether the shot was a winner or an error, and who was serving
-- **Play-by-play viewer** — a public page to watch a recorded match unfold point by point, with shot-level analysis including winner/error counts and a breakdown by shot type per player
-- **Event linking** — recorded live matches can be linked to the corresponding JustGo result so the play-by-play is surfaced directly from the match history
+- **League dashboard** (`/leagues`) — rating progression, win/loss record, summary stats,
+  per-opponent head-to-head with expandable match details, and per-event notes.
+- **Event import** (`/leagues/import`, admin) — lists Thom's events from USATT's JustGo API and
+  imports a selected event's matches into Postgres.
+- **Tournament rating predictor** (`/tournament-rating-predictor`, local-only) — recalculates every
+  player's USATT rating for an OmniPong tournament: points-exchange chart, pass 1 adjustments,
+  initial ratings for unrated players, then the final pass.
 
 ## A note on the data
 
-The match history view is intentionally hardcoded for Thom. USATT match data belongs to USATT and I don't have the rights to build a general-purpose product on top of it. This is a personal project, not a platform.
-
-You can browse the non-admin public view at **[https://thom.so](https://thom.so)**.
+The match history is intentionally hardcoded for Thom. USATT match data belongs to USATT, and I
+don't have the rights to build a general-purpose product on top of it. This is a personal project,
+not a platform.
 
 ## Tech stack
 
-- **Next.js 16** (App Router, server + client components)
-- **Prisma** with **PostgreSQL** (hosted on [Neon](https://neon.tech)), connected through the Neon serverless driver
-- **Tailwind CSS**
-- Deployed on **Cloudflare Workers** via [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare)
+- **Next.js 16** — App Router, server + client components
+- **Prisma 7** + **PostgreSQL** on [Neon](https://neon.tech), via `@prisma/adapter-neon` (the Neon
+  serverless driver, so the same code runs in Node and on Workers)
+- **Tailwind CSS 4**
+- **Cloudflare Workers** via [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare)
 
 ## Getting started
 
 ```bash
 npm install
+cp .env.example .env        # then set DATABASE_URL (Neon pooled) and ADMIN_PASSWORD
+npm run db:migrate          # apply migrations
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-You'll need a `.env` file with a `DATABASE_URL` pointing at a Neon (or any Postgres) database, and an `ADMIN_PASSWORD` for the live recording interface.
+Admin-only API routes expect `Authorization: Bearer $ADMIN_PASSWORD`. The import page prompts for
+the password and keeps it in `sessionStorage`.
+
+## Tournament rating predictor (local-only)
+
+The `/tournament-rating-predictor` page and `/api/tournament-rating-predictor` are **not available
+in production builds** — they return 404. A single run fetches one OmniPong page per player (~120
+requests for a big event), which exceeds Cloudflare Workers' subrequest budget.
 
 ```bash
-npm run db:migrate           # apply migrations
-npx prisma generate          # generate the Prisma client
+npm run dev                              # then use the page at /tournament-rating-predictor
+npm run ratings:omnipong -- 6328         # or the CLI; writes scripts/data/omnipong-<id>-ratings.csv
 ```
 
-### Tournament rating predictor
+Doubles aren't rated by USATT, so only singles are counted. Unrated players who won or lost every
+match against rated opponents need the tournament director's estimated rating, which OmniPong
+doesn't publish — those rows are marked as inferred.
 
-The `/tournament-rating-predictor` page and its API route are **local-only** tools
-(they fan out to ~120 OmniPong pages per request, which exceeds Cloudflare
-Workers' subrequest budget). Run `npm run dev` to use them, or use the CLI:
+## Scripts
 
-```bash
-npm run ratings:omnipong -- 6328   # OmniPong tournament id
-```
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Next.js dev server |
+| `npm run build` | `prisma generate && next build` |
+| `npm run start` | Serve a local production build (Node) |
+| `npm run preview` | Build and serve in the Workers runtime (Wrangler) |
+| `npm run deploy` | Build and deploy to Cloudflare |
+| `npm run upload` | Upload a new Worker version without promoting it |
+| `npm run cf-typegen` | Regenerate Cloudflare binding types |
+| `npm run lint` | ESLint |
+| `npm run db:migrate` / `db:push` | Prisma migrations |
+| `npm run ratings:omnipong` | Local tournament rating prediction CLI |
 
 ## Deploying
 
-The app deploys to Cloudflare Workers with `@opennextjs/cloudflare`.
-
 ```bash
-npm install
 npx wrangler login
-
-# First-time only, on your machine:
-cp .dev.vars.example .dev.vars   # then fill in real values
-npm run preview                  # builds and serves in the Workers runtime
-
-# Secrets (once per Worker):
 npx wrangler secret put DATABASE_URL     # Neon pooled connection string
 npx wrangler secret put ADMIN_PASSWORD
-
-npm run deploy                   # build + deploy to Cloudflare
+npm run deploy
 ```
 
-Configuration lives in `wrangler.jsonc` (`nodejs_compat`, static assets, and the
-Worker name) and `open-next.config.ts`. `npm run upload` pushes a new version
-without promoting it; `npm run cf-typegen` regenerates binding types.
+Then attach the custom domain (`thom.so`) to the Worker in the Cloudflare dashboard.
+
+`npm run preview` runs the production build inside `workerd` and reads `.dev.vars` (copy
+`.dev.vars.example`); `next dev` reads `.env` instead.
+
+### Gotchas
+
+- **Keep `runtime = "workerd"`** in the `prisma-client` generator (`prisma/schema.prisma`). Workerd
+  cannot compile WebAssembly from bytes at runtime, so the default `nodejs` runtime fails with
+  *"Wasm code generation disallowed by embedder"*. The `workerd` runtime emits a statically imported
+  `.wasm` module the bundler ships — and it still works under `next dev`.
+- `@opennextjs/cloudflare` requires Next `>=16.4.5` for Next 16.
+- The deployed bundle is ~19 MB gzipped (Next + OpenNext + Prisma's wasm query compiler).
