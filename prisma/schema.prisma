@@ -1,6 +1,9 @@
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
+  // Cloudflare Workers (workerd) forbids compiling WebAssembly from bytes at
+  // runtime; the workerd runtime generates a client the bundler can compile.
+  runtime  = "workerd"
 }
 
 datasource db {
